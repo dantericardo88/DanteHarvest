@@ -1,0 +1,60 @@
+# ---- Large donor / OSS reference directories ----
+.danteforge/oss-repos/
+DanteDistillerV2/
+donors/
+
+# ---- Runtime storage ----
+storage/
+
+# ---- Python build artifacts ----
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+*.whl
+
+# ---- Test & coverage ----
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.nox/
+
+# ---- Environment / secrets ----
+.env
+.env.*
+!.env.example
+*.local
+
+# ---- IDE / editor ----
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# ---- Logs ----
+*.log
+logs/
+
+# ---- Node (Vite SPA build deps) ----
+harvest_ui/reviewer/spa/node_modules/
+
+# ---- Jupyter ----
+.ipynb_checkpoints/
+*.ipynb
+
+# ---- Mypy / type checkers ----
+.mypy_cache/
+.dmypy.json
+
+# ---- Ruff / linters ----
+.ruff_cache/

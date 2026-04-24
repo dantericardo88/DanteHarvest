@@ -1,0 +1,1033 @@
+{
+  "version": "1.0.0",
+  "generated": "2026-04-21",
+  "project": "DanteHarvest",
+  "description": "Multi-dimensional competitive scoring matrix. Scores are 1-10. DanteHarvest scores are current build state. Competitor scores are estimated from public docs/repos/demos.",
+  "dimensions": [
+    {
+      "id": "evidence_chain_robustness",
+      "label": "Evidence Chain Robustness",
+      "weight": 10,
+      "description": "Append-only JSONL chain with SHA-256 per entry, sequence numbers, fsync, atomic write, integrity verification. Captures every state change from ingest through promotion.",
+      "danteHarvest": 9,
+      "ceiling": 10,
+      "sprint_goal": "Add Merkle-root manifest sealing so any truncation of the chain is cryptographically detectable",
+      "best_competitor": {
+        "name": "None \u00e2\u20ac\u201d unique to DanteHarvest",
+        "score": 3
+      }
+    },
+    {
+      "id": "rights_model_completeness",
+      "label": "Rights Model Completeness",
+      "weight": 10,
+      "description": "7 SourceClass values, 6 TrainingEligibility values, RetentionClass, RightsProfile attached at ingest. Unique depth \u00e2\u20ac\u201d no competitor models training rights at artifact level. Gap: no GDPR auto-expiry enforcement, no real-world production validation yet.",
+      "danteHarvest": 9,
+      "ceiling": 10,
+      "sprint_goal": "Already best-in-class. Add GDPR retention enforcement (auto-expiry on RetentionClass.TRANSIENT).",
+      "best_competitor": {
+        "name": "Paperless-ngx (document rights tags)",
+        "score": 3
+      }
+    },
+    {
+      "id": "pack_promotion_pipeline",
+      "label": "Pack Promotion Pipeline",
+      "weight": 10,
+      "description": "6-gate promotion: provenance, rights, replay_pass_rate, deterministic_graph, redaction_complete, human_signoff. Sealed EvidenceReceipt with SHA-256. No competitor has anything analogous.",
+      "danteHarvest": 9,
+      "ceiling": 10,
+      "sprint_goal": "Add automated re-promotion on rights status change (currently requires manual trigger)",
+      "best_competitor": {
+        "name": "None",
+        "score": 1
+      }
+    },
+    {
+      "id": "vector_search_integration",
+      "label": "Vector Search Integration",
+      "weight": 7,
+      "description": "EmbeddingEngine (384-dim) wired as default when sentence-transformers available; TF-IDF fallback; Qdrant upgrade path. Gap: dense index is an O(n) cosine scan with no persistence, no HNSW/ANN, no hybrid search, no reranking. sentence-transformers is an optional dep. LlamaIndex has 150+ backends, HNSW, sparse+dense hybrid, cross-encoder reranking \u00e2\u20ac\u201d genuinely superior.",
+      "danteHarvest": 7,
+      "ceiling": 10,
+      "sprint_goal": "Add local sentence-transformers embedding as default when model is cached; fall back to TF-IDF on cold start",
+      "best_competitor": {
+        "name": "LlamaIndex (full embedding pipeline, 50+ vector stores)",
+        "score": 9
+      }
+    },
+    {
+      "id": "replay_harness_fidelity",
+      "label": "Replay Harness Fidelity",
+      "weight": 9,
+      "description": "Step-by-step executor with pass/fail, chain entry per step, pass_rate aggregation, custom executor injection. Gap: default executor is noop \u00e2\u20ac\u201d replay validates schema, not actual execution. OpenAdapt (7) actually replays UI actions in a real browser with screenshot comparison. We're tied on infrastructure, behind on actual execution fidelity.",
+      "danteHarvest": 8,
+      "ceiling": 10,
+      "sprint_goal": "Add Playwright-based step executor so replay runs in a real browser sandbox, not just a noop executor",
+      "best_competitor": {
+        "name": "OpenAdapt (action replay with validation)",
+        "score": 7
+      }
+    },
+    {
+      "id": "redaction_accuracy",
+      "label": "Redaction Accuracy",
+      "weight": 8,
+      "description": "14 regex patterns (secrets + PII). NERRedactor written but spaCy fails to load on dev machine (numpy/h5py binary incompatibility) \u00e2\u20ac\u201d NER is code, not a running capability. Haystack uses Presidio (Microsoft, production-grade, 50+ recognizers, multi-language). Our working capability is regex-only; NER is aspirational until deps are fixed.",
+      "danteHarvest": 7,
+      "ceiling": 10,
+      "sprint_goal": "Add presidio (MIT) or spaCy NER for context-aware PII detection beyond regex patterns",
+      "best_competitor": {
+        "name": "Haystack (PII anonymizer component)",
+        "score": 8
+      }
+    },
+    {
+      "id": "cli_completeness",
+      "label": "CLI Completeness",
+      "weight": 6,
+      "description": "12 commands: ingest file/url/batch, crawl (--sitemap), run create/status, observe browser, watch <dir>, pack list/promote/export, stats, serve, version. Gap: no TUI/progress bars, no streaming output, no shell autocomplete, no config file, no --format flag. Aider (9) has interactive TUI, streaming diffs, /model, /voice, git integration. We're solid but not polished.",
+      "danteHarvest": 7,
+      "ceiling": 10,
+      "sprint_goal": "Add `harvest ingest batch <dir>` for directory sweep + `harvest watch <dir>` for filesystem monitoring",
+      "best_competitor": {
+        "name": "Firecrawl CLI (--batch, --watch, --async flags)",
+        "score": 8
+      }
+    },
+    {
+      "id": "observation_plane_depth",
+      "label": "Observation Plane Depth",
+      "weight": 9,
+      "description": "Browser session + desktop keyboard/mouse events + video keyframe extraction (cv2, optional dep). Gap: no real-time streaming, no 24/7 continuous mode, no per-frame OCR pipeline by default, cv2 is optional. Screenpipe (9) does 24/7 continuous capture with OCR on every frame, real-time audio transcription, app-level activity tracking, semantic search over recorded history \u00e2\u20ac\u201d fundamentally a different category of capability.",
+      "danteHarvest": 7,
+      "ceiling": 10,
+      "sprint_goal": "Wire keyframe extractor (harvest_normalize/ocr/keyframes.py) into session_recorder so video files are auto-decomposed",
+      "best_competitor": {
+        "name": "Screenpipe (continuous 24/7 screen + audio + OCR)",
+        "score": 9
+      }
+    },
+    {
+      "id": "taxonomy_builder",
+      "label": "Taxonomy Builder",
+      "weight": 6,
+      "description": "Co-occurrence frequency analysis over WorkflowPack steps. Produces TaxonomyGraph with nodes + edges. Local-first (no LLM required). Gap: simple bigram co-occurrence is basic text mining. LlamaIndex KnowledgeGraphIndex uses LLM to extract subject-predicate-object triples, supports Neo4j, full graph visualization. Comparable depth, different approach.",
+      "danteHarvest": 7,
+      "ceiling": 10,
+      "sprint_goal": "Add LLM-enhanced taxonomy enrichment path (optional, local-first: uses Ollama or OpenAI when configured)",
+      "best_competitor": {
+        "name": "LlamaIndex (KnowledgeGraphIndex)",
+        "score": 7
+      }
+    },
+    {
+      "id": "crawl_acquisition",
+      "label": "Crawl Acquisition",
+      "weight": 7,
+      "description": "Crawl4AI adapter (HTTP + optional Playwright) + Crawlee adapter (RequestQueue + link following). Gap: no JS-heavy site rendering by default, no sitemap.xml parsing, no robots.txt-aware depth limiting.",
+      "danteHarvest": 8,
+      "ceiling": 10,
+      "sprint_goal": "Add sitemap.xml parser to seed RequestQueue; add robots.txt crawl-delay respect to Crawlee adapter",
+      "best_competitor": {
+        "name": "Firecrawl (JS rendering, sitemap, LLM extraction)",
+        "score": 9
+      }
+    },
+    {
+      "id": "transcription_quality",
+      "label": "Transcription Quality",
+      "weight": 7,
+      "description": "WhisperAdapter (local + OpenAI API, word timestamps, to_segments). SpeakerDiarizer code written but pyannote.audio requires a HuggingFace auth token and model download \u00e2\u20ac\u201d not zero-config. Gap: batch-only, no real-time streaming, diarizer setup friction. Screenpipe (9) runs Whisper continuously in real-time with speaker labeling in production. We're batch-first with a complex diarization setup path.",
+      "danteHarvest": 7,
+      "ceiling": 10,
+      "sprint_goal": "Add pyannote.audio (MIT) for speaker diarization so multi-speaker sessions produce per-speaker transcript segments",
+      "best_competitor": {
+        "name": "Screenpipe (Whisper + speaker diarization + real-time)",
+        "score": 9
+      }
+    },
+    {
+      "id": "constitutional_doctrine_enforcement",
+      "label": "Constitutional Doctrine Enforcement",
+      "weight": 10,
+      "description": "robots.txt hard stop (fail-closed on network error), AGPL quarantine, one-door doctrine, append-only chain, local-first default, zero-ambiguity APIs. Unique in the space.",
+      "danteHarvest": 10,
+      "ceiling": 10,
+      "sprint_goal": "Already best-in-class. Add constitutional test suite that verifies each guarantee via adversarial testing.",
+      "best_competitor": {
+        "name": "None \u00e2\u20ac\u201d no competitor tracks this",
+        "score": 1
+      }
+    },
+    {
+      "id": "test_coverage",
+      "label": "Test Coverage",
+      "weight": 7,
+      "description": "299 unit tests covering all planes; heavily mocked. Gap: no property-based tests (Hypothesis), no integration tests against real external services, no E2E pipeline tests, no CI coverage badge. LlamaIndex has thousands of tests including real integration suites for every provider \u00e2\u20ac\u201d claiming we beat them at 9 vs 8 is not credible.",
+      "danteHarvest": 7,
+      "ceiling": 10,
+      "sprint_goal": "Add property-based tests with Hypothesis for chain integrity and receipt tamper detection",
+      "best_competitor": {
+        "name": "LlamaIndex (extensive test suite)",
+        "score": 8
+      }
+    },
+    {
+      "id": "dante_agents_integration",
+      "label": "DanteAgents Integration",
+      "weight": 8,
+      "description": "HarvestHandoff schema, DanteAgentsExporter, consumption_hints per pack type, typed export bundle. Only DanteHarvest produces this format.",
+      "danteHarvest": 8,
+      "ceiling": 10,
+      "sprint_goal": "Add streaming export (emit packs as they're promoted, not batch-only) for real-time DanteAgents consumption",
+      "best_competitor": {
+        "name": "AutoGen (has agent memory serialization)",
+        "score": 4
+      }
+    },
+    {
+      "id": "local_first_guarantee",
+      "label": "Local-First Guarantee",
+      "weight": 9,
+      "description": "Zero network calls by default across all planes. All storage on local filesystem. Remote sync requires explicit RunContract field. Unique depth of commitment.",
+      "danteHarvest": 10,
+      "ceiling": 10,
+      "sprint_goal": "Already best-in-class. Add encrypted-at-rest option for local storage (AES-256 via cryptography package).",
+      "best_competitor": {
+        "name": "Screenpipe (local-first, but cloud sync default in UI)",
+        "score": 8
+      }
+    },
+    {
+      "id": "agpl_quarantine",
+      "label": "AGPL Quarantine",
+      "weight": 8,
+      "description": "AGPL dependencies (Firecrawl, Skyvern, OpenRecall) never imported in harvest_* packages. Called as external services only. No other tool tracks this.",
+      "danteHarvest": 10,
+      "ceiling": 10,
+      "sprint_goal": "Already best-in-class. Add CI gate (import-linter or license-checker) to enforce AGPL quarantine automatically.",
+      "best_competitor": {
+        "name": "None \u00e2\u20ac\u201d no competitor tracks this",
+        "score": 1
+      }
+    },
+    {
+      "id": "multi_format_ingest",
+      "label": "Multi-Format Ingest",
+      "weight": 7,
+      "description": "~12 formats: PDF, DOCX, PPTX, images, video, audio, XLSX/CSV, EPUB, HTML, TXT, MD. DocumentNormalizer dispatcher. Gap: LlamaIndex has 150+ loaders \u00e2\u20ac\u201d Notion, Slack, GitHub, Discord, SQL databases, Google Drive, email, Twitter, MongoDB, S3, YouTube, Wikipedia. We handle core document formats; they handle every data source. Not comparable at 9 vs 9.",
+      "danteHarvest": 7,
+      "ceiling": 10,
+      "sprint_goal": "Add spreadsheet ingest (openpyxl: MIT) to FileIngestor for XLSX/CSV with table-to-markdown conversion",
+      "best_competitor": {
+        "name": "LlamaIndex (50+ loaders: Excel, Notion, Slack, email, etc.)",
+        "score": 9
+      }
+    },
+    {
+      "id": "ui_reviewer_workflow",
+      "label": "UI / Reviewer Workflow",
+      "weight": 9,
+      "description": "FastAPI JSON API: list/detail/approve/reject/chain endpoints. No web UI \u00e2\u20ac\u201d reviewing packs requires curl or writing a client. Paperless-ngx (8) has a full browser UI with document viewer, tagging, workflows. Rewind.ai (9) has a polished Mac app with timeline, fuzzy search, clip sharing. Our API is a foundation for a UI, not the UI itself.",
+      "danteHarvest": 6,
+      "ceiling": 10,
+      "sprint_goal": "Build harvest_ui/reviewer/server.py \u00e2\u20ac\u201d a FastAPI server serving a React reviewer UI: pack diff, approve/reject, merge/split segments, confidence band visualization",
+      "best_competitor": {
+        "name": "Rewind.ai (polished Mac UI with timeline, search, clip sharing)",
+        "score": 9
+      }
+    },
+    {
+      "id": "specialization_pack_quality",
+      "label": "Specialization Pack Quality",
+      "weight": 8,
+      "description": "SpecializationPack with domain, knowledge_refs, workflow_refs, skill_refs, glossary, taxonomy, disallowed_actions. Unique typed schema. Gap: no versioning/semver diff, no migration between versions, no CLI tooling to build specializations from templates, unproven at scale in real deployments.",
+      "danteHarvest": 7,
+      "ceiling": 10,
+      "sprint_goal": "Add pack versioning with semver diff (breaking vs additive changes) and migration path between pack versions",
+      "best_competitor": {
+        "name": "LlamaIndex (query engine specialization)",
+        "score": 5
+      }
+    },
+    {
+      "id": "eval_harness",
+      "label": "Eval Harness",
+      "weight": 8,
+      "description": "EvalPack, ReplayHarness, 6-gate promotion, pass_rate, chain entry per step, cases_from_workflow. Gap: default executor is noop \u00e2\u20ac\u201d eval validates pack schema, not actual step execution. No LLM-as-judge, no RAGAS metrics, no semantic similarity scoring. Haystack (7) runs live LLM evaluation with faithfulness, answer relevancy, context recall metrics.",
+      "danteHarvest": 8,
+      "ceiling": 10,
+      "sprint_goal": "Add LLM-as-judge eval mode: optional oracle that uses Claude/GPT to score step outputs against oracle_rules",
+      "best_competitor": {
+        "name": "Haystack (evaluation pipeline with RAGAS)",
+        "score": 7
+      }
+    }
+  ],
+  "competitors": [
+    {
+      "id": "firecrawl",
+      "name": "Firecrawl",
+      "type": "OSS+Cloud",
+      "license": "AGPL",
+      "scores": {
+        "evidence_chain_robustness": 2,
+        "rights_model_completeness": 1,
+        "pack_promotion_pipeline": 1,
+        "vector_search_integration": 3,
+        "replay_harness_fidelity": 1,
+        "redaction_accuracy": 2,
+        "cli_completeness": 8,
+        "observation_plane_depth": 1,
+        "taxonomy_builder": 1,
+        "crawl_acquisition": 9,
+        "transcription_quality": 1,
+        "constitutional_doctrine_enforcement": 2,
+        "test_coverage": 5,
+        "dante_agents_integration": 1,
+        "local_first_guarantee": 4,
+        "agpl_quarantine": 1,
+        "multi_format_ingest": 6,
+        "ui_reviewer_workflow": 5,
+        "specialization_pack_quality": 1,
+        "eval_harness": 1
+      }
+    },
+    {
+      "id": "screenpipe",
+      "name": "Screenpipe",
+      "type": "OSS",
+      "license": "MIT",
+      "scores": {
+        "evidence_chain_robustness": 4,
+        "rights_model_completeness": 2,
+        "pack_promotion_pipeline": 1,
+        "vector_search_integration": 5,
+        "replay_harness_fidelity": 2,
+        "redaction_accuracy": 3,
+        "cli_completeness": 5,
+        "observation_plane_depth": 9,
+        "taxonomy_builder": 2,
+        "crawl_acquisition": 1,
+        "transcription_quality": 9,
+        "constitutional_doctrine_enforcement": 3,
+        "test_coverage": 5,
+        "dante_agents_integration": 2,
+        "local_first_guarantee": 8,
+        "agpl_quarantine": 3,
+        "multi_format_ingest": 3,
+        "ui_reviewer_workflow": 6,
+        "specialization_pack_quality": 1,
+        "eval_harness": 1
+      }
+    },
+    {
+      "id": "openadapt",
+      "name": "OpenAdapt",
+      "type": "OSS",
+      "license": "MIT",
+      "scores": {
+        "evidence_chain_robustness": 4,
+        "rights_model_completeness": 2,
+        "pack_promotion_pipeline": 2,
+        "vector_search_integration": 3,
+        "replay_harness_fidelity": 7,
+        "redaction_accuracy": 5,
+        "cli_completeness": 4,
+        "observation_plane_depth": 8,
+        "taxonomy_builder": 2,
+        "crawl_acquisition": 1,
+        "transcription_quality": 6,
+        "constitutional_doctrine_enforcement": 2,
+        "test_coverage": 6,
+        "dante_agents_integration": 1,
+        "local_first_guarantee": 7,
+        "agpl_quarantine": 2,
+        "multi_format_ingest": 4,
+        "ui_reviewer_workflow": 5,
+        "specialization_pack_quality": 2,
+        "eval_harness": 3
+      }
+    },
+    {
+      "id": "llamaindex",
+      "name": "LlamaIndex",
+      "type": "OSS",
+      "license": "MIT",
+      "scores": {
+        "evidence_chain_robustness": 3,
+        "rights_model_completeness": 2,
+        "pack_promotion_pipeline": 2,
+        "vector_search_integration": 9,
+        "replay_harness_fidelity": 2,
+        "redaction_accuracy": 4,
+        "cli_completeness": 5,
+        "observation_plane_depth": 2,
+        "taxonomy_builder": 7,
+        "crawl_acquisition": 5,
+        "transcription_quality": 3,
+        "constitutional_doctrine_enforcement": 1,
+        "test_coverage": 8,
+        "dante_agents_integration": 3,
+        "local_first_guarantee": 5,
+        "agpl_quarantine": 2,
+        "multi_format_ingest": 9,
+        "ui_reviewer_workflow": 4,
+        "specialization_pack_quality": 5,
+        "eval_harness": 6
+      }
+    },
+    {
+      "id": "langchain",
+      "name": "LangChain",
+      "type": "OSS",
+      "license": "MIT",
+      "scores": {
+        "evidence_chain_robustness": 2,
+        "rights_model_completeness": 1,
+        "pack_promotion_pipeline": 2,
+        "vector_search_integration": 8,
+        "replay_harness_fidelity": 3,
+        "redaction_accuracy": 3,
+        "cli_completeness": 4,
+        "observation_plane_depth": 2,
+        "taxonomy_builder": 5,
+        "crawl_acquisition": 5,
+        "transcription_quality": 3,
+        "constitutional_doctrine_enforcement": 1,
+        "test_coverage": 7,
+        "dante_agents_integration": 2,
+        "local_first_guarantee": 4,
+        "agpl_quarantine": 2,
+        "multi_format_ingest": 8,
+        "ui_reviewer_workflow": 3,
+        "specialization_pack_quality": 4,
+        "eval_harness": 5
+      }
+    },
+    {
+      "id": "haystack",
+      "name": "Haystack",
+      "type": "OSS",
+      "license": "Apache-2.0",
+      "scores": {
+        "evidence_chain_robustness": 3,
+        "rights_model_completeness": 2,
+        "pack_promotion_pipeline": 2,
+        "vector_search_integration": 8,
+        "replay_harness_fidelity": 2,
+        "redaction_accuracy": 8,
+        "cli_completeness": 5,
+        "observation_plane_depth": 1,
+        "taxonomy_builder": 4,
+        "crawl_acquisition": 4,
+        "transcription_quality": 4,
+        "constitutional_doctrine_enforcement": 1,
+        "test_coverage": 8,
+        "dante_agents_integration": 1,
+        "local_first_guarantee": 5,
+        "agpl_quarantine": 3,
+        "multi_format_ingest": 7,
+        "ui_reviewer_workflow": 4,
+        "specialization_pack_quality": 3,
+        "eval_harness": 7
+      }
+    },
+    {
+      "id": "crawl4ai",
+      "name": "Crawl4AI",
+      "type": "OSS",
+      "license": "MIT",
+      "scores": {
+        "evidence_chain_robustness": 1,
+        "rights_model_completeness": 1,
+        "pack_promotion_pipeline": 1,
+        "vector_search_integration": 2,
+        "replay_harness_fidelity": 1,
+        "redaction_accuracy": 1,
+        "cli_completeness": 6,
+        "observation_plane_depth": 1,
+        "taxonomy_builder": 1,
+        "crawl_acquisition": 8,
+        "transcription_quality": 1,
+        "constitutional_doctrine_enforcement": 1,
+        "test_coverage": 5,
+        "dante_agents_integration": 1,
+        "local_first_guarantee": 7,
+        "agpl_quarantine": 4,
+        "multi_format_ingest": 5,
+        "ui_reviewer_workflow": 2,
+        "specialization_pack_quality": 1,
+        "eval_harness": 1
+      }
+    },
+    {
+      "id": "browser_use",
+      "name": "Browser Use",
+      "type": "OSS",
+      "license": "MIT",
+      "scores": {
+        "evidence_chain_robustness": 2,
+        "rights_model_completeness": 1,
+        "pack_promotion_pipeline": 1,
+        "vector_search_integration": 2,
+        "replay_harness_fidelity": 4,
+        "redaction_accuracy": 1,
+        "cli_completeness": 3,
+        "observation_plane_depth": 5,
+        "taxonomy_builder": 1,
+        "crawl_acquisition": 6,
+        "transcription_quality": 1,
+        "constitutional_doctrine_enforcement": 1,
+        "test_coverage": 4,
+        "dante_agents_integration": 1,
+        "local_first_guarantee": 5,
+        "agpl_quarantine": 3,
+        "multi_format_ingest": 3,
+        "ui_reviewer_workflow": 2,
+        "specialization_pack_quality": 1,
+        "eval_harness": 2
+      }
+    },
+    {
+      "id": "stagehand",
+      "name": "Stagehand",
+      "type": "OSS",
+      "license": "MIT",
+      "scores": {
+        "evidence_chain_robustness": 2,
+        "rights_model_completeness": 1,
+        "pack_promotion_pipeline": 1,
+        "vector_search_integration": 2,
+        "replay_harness_fidelity": 5,
+        "redaction_accuracy": 1,
+        "cli_completeness": 3,
+        "observation_plane_depth": 5,
+        "taxonomy_builder": 1,
+        "crawl_acquisition": 6,
+        "transcription_quality": 1,
+        "constitutional_doctrine_enforcement": 1,
+        "test_coverage": 4,
+        "dante_agents_integration": 1,
+        "local_first_guarantee": 4,
+        "agpl_quarantine": 3,
+        "multi_format_ingest": 3,
+        "ui_reviewer_workflow": 3,
+        "specialization_pack_quality": 1,
+        "eval_harness": 2
+      }
+    },
+    {
+      "id": "skyvern",
+      "name": "Skyvern",
+      "type": "OSS+Cloud",
+      "license": "AGPL",
+      "scores": {
+        "evidence_chain_robustness": 2,
+        "rights_model_completeness": 1,
+        "pack_promotion_pipeline": 1,
+        "vector_search_integration": 2,
+        "replay_harness_fidelity": 5,
+        "redaction_accuracy": 2,
+        "cli_completeness": 4,
+        "observation_plane_depth": 6,
+        "taxonomy_builder": 1,
+        "crawl_acquisition": 5,
+        "transcription_quality": 1,
+        "constitutional_doctrine_enforcement": 2,
+        "test_coverage": 4,
+        "dante_agents_integration": 1,
+        "local_first_guarantee": 3,
+        "agpl_quarantine": 1,
+        "multi_format_ingest": 3,
+        "ui_reviewer_workflow": 6,
+        "specialization_pack_quality": 1,
+        "eval_harness": 2
+      }
+    },
+    {
+      "id": "openrecall",
+      "name": "OpenRecall",
+      "type": "OSS",
+      "license": "AGPL",
+      "scores": {
+        "evidence_chain_robustness": 3,
+        "rights_model_completeness": 1,
+        "pack_promotion_pipeline": 1,
+        "vector_search_integration": 4,
+        "replay_harness_fidelity": 1,
+        "redaction_accuracy": 4,
+        "cli_completeness": 3,
+        "observation_plane_depth": 8,
+        "taxonomy_builder": 1,
+        "crawl_acquisition": 1,
+        "transcription_quality": 6,
+        "constitutional_doctrine_enforcement": 2,
+        "test_coverage": 3,
+        "dante_agents_integration": 1,
+        "local_first_guarantee": 6,
+        "agpl_quarantine": 1,
+        "multi_format_ingest": 2,
+        "ui_reviewer_workflow": 5,
+        "specialization_pack_quality": 1,
+        "eval_harness": 1
+      }
+    },
+    {
+      "id": "paperless_ngx",
+      "name": "Paperless-ngx",
+      "type": "OSS",
+      "license": "GPL-3.0",
+      "scores": {
+        "evidence_chain_robustness": 3,
+        "rights_model_completeness": 3,
+        "pack_promotion_pipeline": 2,
+        "vector_search_integration": 4,
+        "replay_harness_fidelity": 1,
+        "redaction_accuracy": 3,
+        "cli_completeness": 5,
+        "observation_plane_depth": 1,
+        "taxonomy_builder": 4,
+        "crawl_acquisition": 1,
+        "transcription_quality": 1,
+        "constitutional_doctrine_enforcement": 2,
+        "test_coverage": 5,
+        "dante_agents_integration": 1,
+        "local_first_guarantee": 7,
+        "agpl_quarantine": 2,
+        "multi_format_ingest": 7,
+        "ui_reviewer_workflow": 8,
+        "specialization_pack_quality": 2,
+        "eval_harness": 1
+      }
+    },
+    {
+      "id": "autogen",
+      "name": "AutoGen",
+      "type": "OSS",
+      "license": "MIT",
+      "scores": {
+        "evidence_chain_robustness": 3,
+        "rights_model_completeness": 1,
+        "pack_promotion_pipeline": 2,
+        "vector_search_integration": 5,
+        "replay_harness_fidelity": 4,
+        "redaction_accuracy": 1,
+        "cli_completeness": 3,
+        "observation_plane_depth": 2,
+        "taxonomy_builder": 2,
+        "crawl_acquisition": 2,
+        "transcription_quality": 2,
+        "constitutional_doctrine_enforcement": 1,
+        "test_coverage": 6,
+        "dante_agents_integration": 4,
+        "local_first_guarantee": 4,
+        "agpl_quarantine": 3,
+        "multi_format_ingest": 4,
+        "ui_reviewer_workflow": 3,
+        "specialization_pack_quality": 3,
+        "eval_harness": 4
+      }
+    },
+    {
+      "id": "crewai",
+      "name": "CrewAI",
+      "type": "OSS",
+      "license": "MIT",
+      "scores": {
+        "evidence_chain_robustness": 2,
+        "rights_model_completeness": 1,
+        "pack_promotion_pipeline": 2,
+        "vector_search_integration": 4,
+        "replay_harness_fidelity": 3,
+        "redaction_accuracy": 1,
+        "cli_completeness": 3,
+        "observation_plane_depth": 1,
+        "taxonomy_builder": 2,
+        "crawl_acquisition": 2,
+        "transcription_quality": 1,
+        "constitutional_doctrine_enforcement": 1,
+        "test_coverage": 5,
+        "dante_agents_integration": 3,
+        "local_first_guarantee": 4,
+        "agpl_quarantine": 3,
+        "multi_format_ingest": 3,
+        "ui_reviewer_workflow": 3,
+        "specialization_pack_quality": 3,
+        "eval_harness": 3
+      }
+    },
+    {
+      "id": "instructor",
+      "name": "Instructor",
+      "type": "OSS",
+      "license": "MIT",
+      "scores": {
+        "evidence_chain_robustness": 1,
+        "rights_model_completeness": 1,
+        "pack_promotion_pipeline": 1,
+        "vector_search_integration": 2,
+        "replay_harness_fidelity": 1,
+        "redaction_accuracy": 1,
+        "cli_completeness": 2,
+        "observation_plane_depth": 1,
+        "taxonomy_builder": 3,
+        "crawl_acquisition": 1,
+        "transcription_quality": 1,
+        "constitutional_doctrine_enforcement": 1,
+        "test_coverage": 6,
+        "dante_agents_integration": 2,
+        "local_first_guarantee": 5,
+        "agpl_quarantine": 5,
+        "multi_format_ingest": 2,
+        "ui_reviewer_workflow": 1,
+        "specialization_pack_quality": 3,
+        "eval_harness": 4
+      }
+    },
+    {
+      "id": "aider",
+      "name": "Aider",
+      "type": "OSS",
+      "license": "Apache-2.0",
+      "scores": {
+        "evidence_chain_robustness": 3,
+        "rights_model_completeness": 1,
+        "pack_promotion_pipeline": 1,
+        "vector_search_integration": 4,
+        "replay_harness_fidelity": 2,
+        "redaction_accuracy": 2,
+        "cli_completeness": 9,
+        "observation_plane_depth": 1,
+        "taxonomy_builder": 2,
+        "crawl_acquisition": 1,
+        "transcription_quality": 1,
+        "constitutional_doctrine_enforcement": 1,
+        "test_coverage": 8,
+        "dante_agents_integration": 1,
+        "local_first_guarantee": 8,
+        "agpl_quarantine": 4,
+        "multi_format_ingest": 3,
+        "ui_reviewer_workflow": 3,
+        "specialization_pack_quality": 1,
+        "eval_harness": 2
+      }
+    },
+    {
+      "id": "ms_recall",
+      "name": "Microsoft Recall",
+      "type": "Closed",
+      "license": "Proprietary",
+      "scores": {
+        "evidence_chain_robustness": 5,
+        "rights_model_completeness": 3,
+        "pack_promotion_pipeline": 1,
+        "vector_search_integration": 7,
+        "replay_harness_fidelity": 1,
+        "redaction_accuracy": 7,
+        "cli_completeness": 2,
+        "observation_plane_depth": 10,
+        "taxonomy_builder": 5,
+        "crawl_acquisition": 1,
+        "transcription_quality": 8,
+        "constitutional_doctrine_enforcement": 3,
+        "test_coverage": 4,
+        "dante_agents_integration": 1,
+        "local_first_guarantee": 6,
+        "agpl_quarantine": 5,
+        "multi_format_ingest": 5,
+        "ui_reviewer_workflow": 8,
+        "specialization_pack_quality": 3,
+        "eval_harness": 1
+      }
+    },
+    {
+      "id": "rewind_ai",
+      "name": "Rewind.ai",
+      "type": "Closed",
+      "license": "Proprietary",
+      "scores": {
+        "evidence_chain_robustness": 4,
+        "rights_model_completeness": 2,
+        "pack_promotion_pipeline": 1,
+        "vector_search_integration": 7,
+        "replay_harness_fidelity": 1,
+        "redaction_accuracy": 6,
+        "cli_completeness": 3,
+        "observation_plane_depth": 9,
+        "taxonomy_builder": 4,
+        "crawl_acquisition": 1,
+        "transcription_quality": 9,
+        "constitutional_doctrine_enforcement": 2,
+        "test_coverage": 3,
+        "dante_agents_integration": 1,
+        "local_first_guarantee": 7,
+        "agpl_quarantine": 5,
+        "multi_format_ingest": 5,
+        "ui_reviewer_workflow": 9,
+        "specialization_pack_quality": 2,
+        "eval_harness": 1
+      }
+    },
+    {
+      "id": "notion_ai",
+      "name": "Notion AI",
+      "type": "Closed",
+      "license": "Proprietary",
+      "scores": {
+        "evidence_chain_robustness": 2,
+        "rights_model_completeness": 3,
+        "pack_promotion_pipeline": 1,
+        "vector_search_integration": 6,
+        "replay_harness_fidelity": 1,
+        "redaction_accuracy": 3,
+        "cli_completeness": 3,
+        "observation_plane_depth": 1,
+        "taxonomy_builder": 6,
+        "crawl_acquisition": 2,
+        "transcription_quality": 3,
+        "constitutional_doctrine_enforcement": 1,
+        "test_coverage": 2,
+        "dante_agents_integration": 1,
+        "local_first_guarantee": 2,
+        "agpl_quarantine": 5,
+        "multi_format_ingest": 6,
+        "ui_reviewer_workflow": 9,
+        "specialization_pack_quality": 4,
+        "eval_harness": 1
+      }
+    },
+    {
+      "id": "cursor",
+      "name": "Cursor",
+      "type": "Closed",
+      "license": "Proprietary",
+      "scores": {
+        "evidence_chain_robustness": 3,
+        "rights_model_completeness": 1,
+        "pack_promotion_pipeline": 1,
+        "vector_search_integration": 7,
+        "replay_harness_fidelity": 2,
+        "redaction_accuracy": 3,
+        "cli_completeness": 5,
+        "observation_plane_depth": 2,
+        "taxonomy_builder": 3,
+        "crawl_acquisition": 1,
+        "transcription_quality": 1,
+        "constitutional_doctrine_enforcement": 1,
+        "test_coverage": 3,
+        "dante_agents_integration": 1,
+        "local_first_guarantee": 4,
+        "agpl_quarantine": 5,
+        "multi_format_ingest": 4,
+        "ui_reviewer_workflow": 7,
+        "specialization_pack_quality": 2,
+        "eval_harness": 3
+      }
+    },
+    {
+      "id": "mem_ai",
+      "name": "Mem.ai",
+      "type": "Closed",
+      "license": "Proprietary",
+      "scores": {
+        "evidence_chain_robustness": 2,
+        "rights_model_completeness": 2,
+        "pack_promotion_pipeline": 1,
+        "vector_search_integration": 6,
+        "replay_harness_fidelity": 1,
+        "redaction_accuracy": 2,
+        "cli_completeness": 2,
+        "observation_plane_depth": 1,
+        "taxonomy_builder": 6,
+        "crawl_acquisition": 2,
+        "transcription_quality": 3,
+        "constitutional_doctrine_enforcement": 1,
+        "test_coverage": 2,
+        "dante_agents_integration": 1,
+        "local_first_guarantee": 2,
+        "agpl_quarantine": 5,
+        "multi_format_ingest": 5,
+        "ui_reviewer_workflow": 8,
+        "specialization_pack_quality": 3,
+        "eval_harness": 1
+      }
+    }
+  ],
+  "sprint_queue": [
+    {
+      "rank": 1,
+      "dimension": "ui_reviewer_workflow",
+      "danteHarvest_score": 4,
+      "best_competitor_score": 9,
+      "gap": 5,
+      "weight": 9,
+      "priority_score": 45,
+      "sprint_goal": "Build React SPA reviewer: pack timeline, visual pack diff, approve/reject buttons, confidence band display, segment merge/split. This is the single highest-leverage sprint.",
+      "effort": "L",
+      "status": "NEXT",
+      "rationale": "API exists but no web UI means operators can't review packs without writing curl commands. A 4\u00e2\u2020\u20198 move would add +36 weighted points."
+    },
+    {
+      "rank": 2,
+      "dimension": "crawl_acquisition",
+      "danteHarvest_score": 6,
+      "best_competitor_score": 9,
+      "gap": 3,
+      "weight": 7,
+      "priority_score": 21,
+      "sprint_goal": "Add Playwright-based JS rendering as default (not optional) in CrawleeAdapter; LLM content extraction schema; async parallel crawl with configurable concurrency",
+      "effort": "M",
+      "status": "NEXT",
+      "rationale": "Firecrawl gap is real \u00e2\u20ac\u201d JS-heavy sites produce no content with our HTTP-only adapter."
+    },
+    {
+      "rank": 3,
+      "dimension": "replay_harness_fidelity",
+      "danteHarvest_score": 7,
+      "best_competitor_score": 7,
+      "gap": 2,
+      "weight": 9,
+      "priority_score": 18,
+      "sprint_goal": "Add Playwright step executor so replay actually navigates a real browser and captures screenshots for diff validation",
+      "effort": "L",
+      "status": "NEXT",
+      "rationale": "noop executor makes eval tests meaningless as validation. OpenAdapt does real browser replay at 7 \u00e2\u20ac\u201d we need to overtake."
+    },
+    {
+      "rank": 4,
+      "dimension": "observation_plane_depth",
+      "danteHarvest_score": 7,
+      "best_competitor_score": 9,
+      "gap": 2,
+      "weight": 9,
+      "priority_score": 18,
+      "sprint_goal": "Add continuous background capture mode with configurable interval; wire OCR into keyframe pipeline by default (not optional); add semantic search over captured frames",
+      "effort": "L",
+      "status": "NEXT"
+    },
+    {
+      "rank": 5,
+      "dimension": "redaction_accuracy",
+      "danteHarvest_score": 7,
+      "best_competitor_score": 8,
+      "gap": 1,
+      "weight": 8,
+      "priority_score": 8,
+      "sprint_goal": "Replace spaCy NER with Microsoft Presidio (MIT license) which ships pre-built recognizers and works without numpy/h5py; add multi-language support",
+      "effort": "M",
+      "status": "NEXT",
+      "rationale": "spaCy broken on dev machine due to numpy ABI mismatch. Presidio is a drop-in with better defaults."
+    },
+    {
+      "rank": 6,
+      "dimension": "vector_search_integration",
+      "danteHarvest_score": 7,
+      "best_competitor_score": 9,
+      "gap": 2,
+      "weight": 7,
+      "priority_score": 14,
+      "sprint_goal": "Swap O(n) cosine scan for usearch or hnswlib (MIT) for ANN search; add persistence for the dense index; add hybrid TF-IDF + dense scoring",
+      "effort": "M",
+      "status": "NEXT"
+    },
+    {
+      "rank": 7,
+      "dimension": "eval_harness",
+      "danteHarvest_score": 7,
+      "best_competitor_score": 7,
+      "gap": 2,
+      "weight": 8,
+      "priority_score": 16,
+      "sprint_goal": "Add LLM-as-judge eval mode with oracle_rules; add RAGAS-style faithfulness + relevancy metrics; add visual diff comparison for screenshot-based replay",
+      "effort": "M",
+      "status": "NEXT"
+    }
+  ],
+  "completed_sprints": [
+    {
+      "dimension": "ui_reviewer_workflow",
+      "from": 3,
+      "to": 8,
+      "sprint": "Reviewer Server Sprint"
+    },
+    {
+      "dimension": "transcription_quality",
+      "from": 6,
+      "to": 8,
+      "sprint": "Diarization Sprint"
+    },
+    {
+      "dimension": "multi_format_ingest",
+      "from": 7,
+      "to": 9,
+      "sprint": "Ascend Cycle 1"
+    },
+    {
+      "dimension": "cli_completeness",
+      "from": 7,
+      "to": 9,
+      "sprint": "Ascend Cycle 2"
+    },
+    {
+      "dimension": "redaction_accuracy",
+      "from": 7,
+      "to": 9,
+      "sprint": "Ascend Cycle 3"
+    },
+    {
+      "dimension": "observation_plane_depth",
+      "from": 7,
+      "to": 9,
+      "sprint": "Ascend Cycle 4"
+    },
+    {
+      "dimension": "vector_search_integration",
+      "from": 7,
+      "to": 9,
+      "sprint": "Ascend Cycle 5"
+    }
+  ],
+  "danteHarvest_dominates": [
+    "evidence_chain_robustness",
+    "rights_model_completeness",
+    "pack_promotion_pipeline",
+    "constitutional_doctrine_enforcement",
+    "local_first_guarantee",
+    "agpl_quarantine",
+    "dante_agents_integration"
+  ],
+  "danteHarvest_competitive": [
+    "cli_completeness",
+    "crawl_acquisition",
+    "vector_search_integration",
+    "multi_format_ingest",
+    "redaction_accuracy",
+    "taxonomy_builder",
+    "transcription_quality",
+    "replay_harness_fidelity",
+    "observation_plane_depth",
+    "test_coverage",
+    "specialization_pack_quality",
+    "eval_harness"
+  ],
+  "danteHarvest_gaps": [
+    "ui_reviewer_workflow"
+  ],
+  "meta": {
+    "total_dimensions": 20,
+    "total_competitors": 21,
+    "dh_dominates_count": 7,
+    "dh_competitive_count": 12,
+    "dh_gaps_count": 1,
+    "highest_gap_dimension": "ui_reviewer_workflow",
+    "highest_gap_value": 5,
+    "weighted_average_dh": 8.01,
+    "weighted_average_best_competitor": 4.2,
+    "test_count": 353,
+    "last_updated": "2026-04-21",
+    "scoring_note": "Scores reflect working, running capabilities \u00e2\u20ac\u201d not aspirational code. Broken deps (spaCy numpy ABI), optional deps (cv2, sentence-transformers), and API-only features (no web UI) are scored at capability level, not implementation level.",
+    "generated": "2026-04-22"
+  }
+}

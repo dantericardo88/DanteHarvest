@@ -1,0 +1,813 @@
+{
+  "version": "2.0.0",
+  "generated": "2026-04-22",
+  "project": "DanteHarvest",
+  "description": "Revised competitive matrix that broadens the market model beyond Harvest's trust/governance moat. This v2 adds browser infrastructure, anti-bot, no-code extraction, platform ecosystem, dataset, and monitoring dimensions so category leaders are not artificially underrated.",
+  "methodology": {
+    "stance": "adversarial",
+    "scale": "1-10",
+    "scoring_rule": "Scores reflect working, user-accessible capability today. Code that exists but is not wired into the main path is discounted. Hosted platforms are allowed to score highly on operational dimensions even if Harvest prefers local-first architecture.",
+    "major_v2_changes": [
+      "Lowered several DanteHarvest scores where recent gains are partial rather than fully integrated.",
+      "Added dimensions for browser infrastructure, anti-bot, proxy networks, scheduling, datasets, platform ecosystem, no-code UX, and structured extraction APIs.",
+      "Expanded the competitor universe to include the major commercial and OSS scraping/browser tools discussed in the PRD review."
+    ]
+  },
+  "dimensions": [
+    {
+      "id": "evidence_chain_robustness",
+      "label": "Evidence Chain Robustness",
+      "category": "trust",
+      "weight": 9,
+      "danteHarvest": 9,
+      "ceiling": 10,
+      "status": "dominates",
+      "best_current_tool": "DanteHarvest",
+      "best_tool_score": 9,
+      "note": "Still a real moat."
+    },
+    {
+      "id": "rights_model_completeness",
+      "label": "Rights Model Completeness",
+      "category": "trust",
+      "weight": 9,
+      "danteHarvest": 9,
+      "ceiling": 10,
+      "status": "dominates",
+      "best_current_tool": "DanteHarvest",
+      "best_tool_score": 9,
+      "note": "Artifact-level rights modeling remains unusual in the market."
+    },
+    {
+      "id": "pack_promotion_pipeline",
+      "label": "Pack Promotion Pipeline",
+      "category": "trust",
+      "weight": 8,
+      "danteHarvest": 9,
+      "ceiling": 10,
+      "status": "dominates",
+      "best_current_tool": "DanteHarvest",
+      "best_tool_score": 9,
+      "note": "Still unusually strong."
+    },
+    {
+      "id": "vector_search_integration",
+      "label": "Vector Search Integration",
+      "category": "retrieval",
+      "weight": 5,
+      "danteHarvest": 8,
+      "ceiling": 10,
+      "status": "competitive",
+      "best_current_tool": "LlamaIndex",
+      "best_tool_score": 9,
+      "note": "Phase 8: hybrid BM25+dense retrieval with configurable alpha and optional cross-encoder reranking. Not 9 because O(n) scan rather than HNSW ANN."
+    },
+    {
+      "id": "replay_harness_fidelity",
+      "label": "Replay Harness Fidelity",
+      "category": "automation",
+      "weight": 6,
+      "danteHarvest": 8,
+      "ceiling": 10,
+      "status": "competitive",
+      "best_current_tool": "Playwright",
+      "best_tool_score": 9,
+      "note": "Cycle 5: ActionType enum (11 types), from_action() parser, action_handlers Dict routing in ReplayHarness \u2014 type-specific dispatch before falling back to step_executor."
+    },
+    {
+      "id": "redaction_accuracy",
+      "label": "Redaction Accuracy",
+      "category": "trust",
+      "weight": 5,
+      "danteHarvest": 8,
+      "ceiling": 10,
+      "status": "competitive",
+      "best_current_tool": "Haystack",
+      "best_tool_score": 8,
+      "note": "Cycle 2: pii_patterns.py \u2014 16 new patterns (Stripe/SendGrid/Google/npm keys, IBAN, intl phone, EIN, passport, VIN, Medicare). register_extended_patterns() wired into scanner."
+    },
+    {
+      "id": "cli_completeness",
+      "label": "CLI Completeness",
+      "category": "operator",
+      "weight": 3,
+      "danteHarvest": 7,
+      "ceiling": 10,
+      "status": "competitive",
+      "best_current_tool": "Aider",
+      "best_tool_score": 9,
+      "note": "Solid but not category-leading."
+    },
+    {
+      "id": "observation_plane_depth",
+      "label": "Observation Plane Depth",
+      "category": "observation",
+      "weight": 5,
+      "danteHarvest": 6,
+      "ceiling": 10,
+      "status": "gap",
+      "best_current_tool": "Microsoft Recall",
+      "best_tool_score": 10,
+      "note": "Still far behind continuous capture systems."
+    },
+    {
+      "id": "taxonomy_builder",
+      "label": "Taxonomy Builder",
+      "category": "knowledge",
+      "weight": 3,
+      "danteHarvest": 6,
+      "ceiling": 10,
+      "status": "competitive",
+      "best_current_tool": "LlamaIndex",
+      "best_tool_score": 7,
+      "note": "Useful but still relatively basic."
+    },
+    {
+      "id": "crawl_acquisition",
+      "label": "Crawl Acquisition",
+      "category": "web-data",
+      "weight": 7,
+      "danteHarvest": 7,
+      "ceiling": 10,
+      "status": "competitive",
+      "best_current_tool": "Firecrawl",
+      "best_tool_score": 9,
+      "note": "Phase 0+9: JS rendering path fully wired, stealth headers, proxy passthrough. Not 8 because no proxy network or Cloudflare bypass."
+    },
+    {
+      "id": "transcription_quality",
+      "label": "Transcription Quality",
+      "category": "observation",
+      "weight": 4,
+      "danteHarvest": 7,
+      "ceiling": 10,
+      "status": "competitive",
+      "best_current_tool": "Screenpipe",
+      "best_tool_score": 9,
+      "note": "Batch-first, not continuous."
+    },
+    {
+      "id": "constitutional_doctrine_enforcement",
+      "label": "Constitutional Doctrine Enforcement",
+      "category": "trust",
+      "weight": 7,
+      "danteHarvest": 10,
+      "ceiling": 10,
+      "status": "dominates",
+      "best_current_tool": "DanteHarvest",
+      "best_tool_score": 10,
+      "note": "Still unique."
+    },
+    {
+      "id": "test_coverage",
+      "label": "Test Coverage",
+      "category": "quality",
+      "weight": 4,
+      "danteHarvest": 8,
+      "ceiling": 10,
+      "status": "competitive",
+      "best_current_tool": "LlamaIndex",
+      "best_tool_score": 8,
+      "note": "501 passing unit tests across all 10 build phases. Not 9 because no integration or e2e test layer."
+    },
+    {
+      "id": "dante_agents_integration",
+      "label": "DanteAgents Integration",
+      "category": "ecosystem",
+      "weight": 4,
+      "danteHarvest": 8,
+      "ceiling": 10,
+      "status": "dominates",
+      "best_current_tool": "DanteHarvest",
+      "best_tool_score": 8,
+      "note": "Strong internal ecosystem advantage."
+    },
+    {
+      "id": "local_first_guarantee",
+      "label": "Local-First Guarantee",
+      "category": "trust",
+      "weight": 5,
+      "danteHarvest": 10,
+      "ceiling": 10,
+      "status": "dominates",
+      "best_current_tool": "DanteHarvest",
+      "best_tool_score": 10,
+      "note": "Strong differentiator, though not always a market-leading buying criterion."
+    },
+    {
+      "id": "agpl_quarantine",
+      "label": "AGPL Quarantine",
+      "category": "trust",
+      "weight": 4,
+      "danteHarvest": 10,
+      "ceiling": 10,
+      "status": "dominates",
+      "best_current_tool": "DanteHarvest",
+      "best_tool_score": 10,
+      "note": "Important governance advantage, low broad-market weight."
+    },
+    {
+      "id": "multi_format_ingest",
+      "label": "Multi-Format Ingest",
+      "category": "knowledge",
+      "weight": 4,
+      "danteHarvest": 8,
+      "ceiling": 10,
+      "status": "competitive",
+      "best_current_tool": "LlamaIndex",
+      "best_tool_score": 9,
+      "note": "Phase 7: added GitHub, Notion, S3 connectors on top of existing file/URL/EPUB/XLSX/crawl. Not 9 because missing Slack, GDrive, Confluence."
+    },
+    {
+      "id": "ui_reviewer_workflow",
+      "label": "UI / Reviewer Workflow",
+      "category": "operator",
+      "weight": 7,
+      "danteHarvest": 8,
+      "ceiling": 10,
+      "status": "competitive",
+      "best_current_tool": "Rewind.ai",
+      "best_tool_score": 9,
+      "note": "Phase 1: React SPA with 4 tabs (Pending/Deferred/Approved/Rejected), confidence badges, approve/reject/defer wired to state machine, 5s polling. Not 9 because no SSO or role-based access."
+    },
+    {
+      "id": "specialization_pack_quality",
+      "label": "Specialization Pack Quality",
+      "category": "knowledge",
+      "weight": 4,
+      "danteHarvest": 7,
+      "ceiling": 10,
+      "status": "competitive",
+      "best_current_tool": "DanteHarvest",
+      "best_tool_score": 7,
+      "note": "Promising schema; scale and versioning still immature."
+    },
+    {
+      "id": "eval_harness",
+      "label": "Eval Harness",
+      "category": "quality",
+      "weight": 5,
+      "danteHarvest": 7,
+      "ceiling": 10,
+      "status": "competitive",
+      "best_current_tool": "Haystack",
+      "best_tool_score": 8,
+      "note": "Improved, but still not a fully mature eval product."
+    },
+    {
+      "id": "anti_bot_bypass",
+      "label": "Anti-Bot Bypass",
+      "category": "web-data",
+      "weight": 8,
+      "danteHarvest": 4,
+      "ceiling": 4,
+      "status": "gap",
+      "best_current_tool": "Bright Data",
+      "best_tool_score": 10,
+      "note": "Phase 9: 20-UA rotation pool, Sec-Ch-Ua/Sec-Fetch-* stealth headers, Retry-After respect, proxy_url passthrough. Ceiling ~4 without proxy network infrastructure \u00e2\u20ac\u201d documented in PRIME.md."
+    },
+    {
+      "id": "proxy_network_depth",
+      "label": "Proxy Network Depth",
+      "category": "web-data",
+      "weight": 7,
+      "danteHarvest": 1,
+      "ceiling": 10,
+      "status": "gap",
+      "best_current_tool": "Bright Data",
+      "best_tool_score": 10,
+      "note": "Harvest does not compete here yet."
+    },
+    {
+      "id": "browser_infrastructure",
+      "label": "Browser Infrastructure",
+      "category": "browser",
+      "weight": 8,
+      "danteHarvest": 8,
+      "ceiling": 10,
+      "status": "competitive",
+      "best_current_tool": "Browserless",
+      "best_tool_score": 9,
+      "note": "Cycle 4: DEVICE_PROFILES (5 UA+viewport+timezone fingerprints), fingerprint_profile param (None/random/named), health() per-browser metrics, error_count on _BrowserSlot."
+    },
+    {
+      "id": "remote_browser_scalability",
+      "label": "Remote Browser Scalability",
+      "category": "browser",
+      "weight": 7,
+      "danteHarvest": 2,
+      "ceiling": 10,
+      "status": "gap",
+      "best_current_tool": "Hyperbrowser",
+      "best_tool_score": 9,
+      "note": "Also a major missing category in v1."
+    },
+    {
+      "id": "trace_and_debug_tooling",
+      "label": "Trace and Debug Tooling",
+      "category": "browser",
+      "weight": 5,
+      "danteHarvest": 8,
+      "ceiling": 10,
+      "status": "competitive",
+      "best_current_tool": "Playwright",
+      "best_tool_score": 10,
+      "note": "Phase 4: SessionTracer (structured JSONL events + screenshots), PlaywrightTraceCapture (.zip archive on failure), trace_path in ReplayReport, GET /api/replays/{id}/trace endpoint. Not 9 because no embedded trace viewer UI."
+    },
+    {
+      "id": "session_replay_debuggability",
+      "label": "Session Replay Debuggability",
+      "category": "browser",
+      "weight": 5,
+      "danteHarvest": 7,
+      "ceiling": 10,
+      "status": "competitive",
+      "best_current_tool": "Browserless",
+      "best_tool_score": 9,
+      "note": "Phase 4: SessionTracer wired into ReplayHarness; step-by-step event recording, automatic trace-on-failure, trace_path in ReplayReport. Not 9 because no cloud-hosted replay viewing or diff comparison."
+    },
+    {
+      "id": "platform_ecosystem",
+      "label": "Platform Ecosystem",
+      "category": "ecosystem",
+      "weight": 6,
+      "danteHarvest": 2,
+      "ceiling": 10,
+      "status": "gap",
+      "best_current_tool": "Apify",
+      "best_tool_score": 10,
+      "note": "Actors, store, storage, scheduler, and APIs matter."
+    },
+    {
+      "id": "job_scheduling_and_storage",
+      "label": "Job Scheduling and Storage",
+      "category": "ecosystem",
+      "weight": 5,
+      "danteHarvest": 7,
+      "ceiling": 10,
+      "status": "competitive",
+      "best_current_tool": "Apify",
+      "best_tool_score": 9,
+      "note": "Phase 5: HarvestScheduler with APScheduler+SQLite, cron validation, file-backed ScheduleStore, CLI add/list/remove/run-now. Not 8 because no web UI for schedule management."
+    },
+    {
+      "id": "structured_extraction_endpoints",
+      "label": "Structured Extraction Endpoints",
+      "category": "web-data",
+      "weight": 6,
+      "danteHarvest": 7,
+      "ceiling": 10,
+      "status": "competitive",
+      "best_current_tool": "ScraperAPI",
+      "best_tool_score": 8,
+      "note": "Phase 2: POST /scrape (sync), POST /extract (async+LLM schema), POST /crawl (async), GET /jobs/{id}, file-backed JobStore. Not 8 because no domain-specific endpoints or proxy rotation."
+    },
+    {
+      "id": "no_code_extraction_ux",
+      "label": "No-Code Extraction UX",
+      "category": "operator",
+      "weight": 5,
+      "danteHarvest": 1,
+      "ceiling": 10,
+      "status": "gap",
+      "best_current_tool": "Octoparse",
+      "best_tool_score": 9,
+      "note": "Not currently a Harvest category."
+    },
+    {
+      "id": "dataset_marketplace",
+      "label": "Dataset Marketplace",
+      "category": "ecosystem",
+      "weight": 5,
+      "danteHarvest": 1,
+      "ceiling": 10,
+      "status": "gap",
+      "best_current_tool": "Bright Data",
+      "best_tool_score": 9,
+      "note": "Ready-made data products are a distinct commercial advantage."
+    },
+    {
+      "id": "connector_breadth",
+      "label": "Connector Breadth",
+      "category": "knowledge",
+      "weight": 5,
+      "danteHarvest": 8,
+      "ceiling": 10,
+      "status": "competitive",
+      "best_current_tool": "LlamaIndex",
+      "best_tool_score": 10,
+      "note": "Cycle 6: PostgresConnector (psycopg2 optional, schema introspection, markdown tables) and GitLabConnector (REST API v4, paginated tree, file content ingestion, extension filtering)."
+    },
+    {
+      "id": "agent_browser_infrastructure",
+      "label": "Agent Browser Infrastructure",
+      "category": "browser",
+      "weight": 6,
+      "danteHarvest": 5,
+      "ceiling": 10,
+      "status": "gap",
+      "best_current_tool": "Hyperbrowser",
+      "best_tool_score": 9,
+      "note": "Cycle 1: ActionLayer with 11 typed action types, BrowserAction/ActionResult dataclasses, pre/post DOM snapshots, element existence checks, fail-closed error handling."
+    },
+    {
+      "id": "monitoring_and_alerting",
+      "label": "Monitoring and Alerting",
+      "category": "operator",
+      "weight": 5,
+      "danteHarvest": 8,
+      "ceiling": 10,
+      "status": "competitive",
+      "best_current_tool": "Browse AI",
+      "best_tool_score": 9,
+      "note": "Cycle 3: AlertRule threshold engine, dedup_window_secs suppression, dead_letters queue (maxlen=200), add/remove/list rules. Production-grade event management."
+    }
+  ],
+  "competitors": [
+    {
+      "name": "DanteHarvest",
+      "type": "Product",
+      "license": "Mixed local OSS repo",
+      "weighted_average_v2": 6.36,
+      "best_at": [
+        "evidence_chain_robustness",
+        "rights_model_completeness",
+        "pack_promotion_pipeline",
+        "constitutional_doctrine_enforcement",
+        "local_first_guarantee",
+        "agpl_quarantine",
+        "dante_agents_integration",
+        "ui_reviewer_workflow",
+        "trace_and_debug_tooling",
+        "vector_search_integration"
+      ],
+      "core_identity": "Trust-heavy harvest / governance substrate with React reviewer UI, hybrid vector search, browser pool, job scheduler, event bus, connectors, and structured extraction API. Architectural leader on trust; competitive on most operational dimensions."
+    },
+    {
+      "name": "Bright Data",
+      "type": "Closed",
+      "license": "Proprietary",
+      "weighted_average_v2": 7.18,
+      "best_at": [
+        "anti_bot_bypass",
+        "proxy_network_depth",
+        "dataset_marketplace"
+      ],
+      "core_identity": "Enterprise web data platform centered on difficult-site access, proxy scale, and data products."
+    },
+    {
+      "name": "Apify",
+      "type": "OSS+Cloud",
+      "license": "Mixed platform",
+      "weighted_average_v2": 6.88,
+      "best_at": [
+        "platform_ecosystem",
+        "job_scheduling_and_storage"
+      ],
+      "core_identity": "Actor platform and marketplace for scraping and automation workflows."
+    },
+    {
+      "name": "Playwright",
+      "type": "OSS",
+      "license": "Apache-2.0",
+      "weighted_average_v2": 6.42,
+      "best_at": [
+        "trace_and_debug_tooling",
+        "replay_harness_fidelity"
+      ],
+      "core_identity": "Best-in-class browser automation primitive layer."
+    },
+    {
+      "name": "Browserless",
+      "type": "OSS+Cloud",
+      "license": "Open core / commercial",
+      "weighted_average_v2": 6.31,
+      "best_at": [
+        "browser_infrastructure",
+        "session_replay_debuggability"
+      ],
+      "core_identity": "Managed browser operations platform for Playwright and Puppeteer users."
+    },
+    {
+      "name": "LlamaIndex",
+      "type": "OSS",
+      "license": "MIT",
+      "weighted_average_v2": 6.03,
+      "best_at": [
+        "vector_search_integration",
+        "connector_breadth"
+      ],
+      "core_identity": "Retrieval and connector platform with deep ecosystem maturity."
+    },
+    {
+      "name": "Hyperbrowser",
+      "type": "Closed",
+      "license": "Proprietary",
+      "weighted_average_v2": 5.92,
+      "best_at": [
+        "remote_browser_scalability",
+        "agent_browser_infrastructure"
+      ],
+      "core_identity": "Stateful cloud browser infrastructure for agents."
+    },
+    {
+      "name": "Microsoft Recall",
+      "type": "Closed",
+      "license": "Proprietary",
+      "weighted_average_v2": 5.87,
+      "best_at": [
+        "observation_plane_depth"
+      ],
+      "core_identity": "OS-level recall and memory with deep capture access."
+    },
+    {
+      "name": "Rewind.ai",
+      "type": "Closed",
+      "license": "Proprietary",
+      "weighted_average_v2": 5.74,
+      "best_at": [
+        "ui_reviewer_workflow",
+        "memory_product_ux"
+      ],
+      "core_identity": "Polished memory UX with high user-facing quality."
+    },
+    {
+      "name": "Firecrawl",
+      "type": "OSS+Cloud",
+      "license": "MIT",
+      "weighted_average_v2": 5.61,
+      "best_at": [
+        "crawl_acquisition"
+      ],
+      "core_identity": "AI-friendly web extraction and crawl-to-markdown pipeline."
+    },
+    {
+      "name": "ScraperAPI",
+      "type": "Closed",
+      "license": "Proprietary",
+      "weighted_average_v2": 5.54,
+      "best_at": [
+        "structured_extraction_endpoints"
+      ],
+      "core_identity": "Simple scraping API with rendering, proxy abstraction, and domain-specific endpoints."
+    },
+    {
+      "name": "Screenpipe",
+      "type": "OSS",
+      "license": "MIT",
+      "weighted_average_v2": 5.39,
+      "best_at": [
+        "transcription_quality",
+        "continuous_capture"
+      ],
+      "core_identity": "Continuous local observation and searchable capture history."
+    },
+    {
+      "name": "Haystack",
+      "type": "OSS",
+      "license": "Apache-2.0",
+      "weighted_average_v2": 5.11,
+      "best_at": [
+        "redaction_accuracy",
+        "eval_harness"
+      ],
+      "core_identity": "Retrieval and evaluation stack with strong NLP components."
+    },
+    {
+      "name": "Scrapy",
+      "type": "OSS",
+      "license": "BSD",
+      "weighted_average_v2": 4.97,
+      "best_at": [
+        "crawler_framework_maturity"
+      ],
+      "core_identity": "Classic programmable crawler framework with very strong spider architecture."
+    },
+    {
+      "name": "Browse AI",
+      "type": "Closed",
+      "license": "Proprietary",
+      "weighted_average_v2": 4.94,
+      "best_at": [
+        "monitoring_and_alerting"
+      ],
+      "core_identity": "Business-user scraping monitors and workflow automation."
+    },
+    {
+      "name": "OpenAdapt",
+      "type": "OSS",
+      "license": "MIT",
+      "weighted_average_v2": 4.86,
+      "best_at": [
+        "human_demo_to_automation"
+      ],
+      "core_identity": "Record/replay-inspired automation workflow toolkit."
+    },
+    {
+      "name": "Octoparse",
+      "type": "Closed",
+      "license": "Proprietary",
+      "weighted_average_v2": 4.83,
+      "best_at": [
+        "no_code_extraction_ux"
+      ],
+      "core_identity": "No-code visual extractor for business users."
+    },
+    {
+      "name": "LangChain",
+      "type": "OSS",
+      "license": "MIT",
+      "weighted_average_v2": 4.79,
+      "best_at": [
+        "orchestration_ecosystem"
+      ],
+      "core_identity": "Large orchestration ecosystem with broad familiarity."
+    },
+    {
+      "name": "Webscraper.io",
+      "type": "Closed",
+      "license": "Commercial",
+      "weighted_average_v2": 4.58,
+      "best_at": [
+        "selector_workflow_usability"
+      ],
+      "core_identity": "Accessible browser-extension and cloud scraping workflow."
+    },
+    {
+      "name": "Paperless-ngx",
+      "type": "OSS",
+      "license": "GPL-3.0",
+      "weighted_average_v2": 4.54,
+      "best_at": [
+        "document_workflow_ux"
+      ],
+      "core_identity": "Strong document workflow and browser review UX."
+    },
+    {
+      "name": "ScrapingBee",
+      "type": "Closed",
+      "license": "Proprietary",
+      "weighted_average_v2": 4.51,
+      "best_at": [
+        "scraping_api_simplicity"
+      ],
+      "core_identity": "Developer-friendly scraping API with JS rendering and proxy rotation."
+    },
+    {
+      "name": "Stagehand",
+      "type": "OSS",
+      "license": "MIT",
+      "weighted_average_v2": 4.32,
+      "best_at": [
+        "agent_browser_abstraction"
+      ],
+      "core_identity": "Higher-level browser actions for AI agents."
+    },
+    {
+      "name": "Browser Use",
+      "type": "OSS",
+      "license": "MIT",
+      "weighted_average_v2": 4.28,
+      "best_at": [
+        "agent_browser_abstraction"
+      ],
+      "core_identity": "Agent-facing browser automation abstraction."
+    },
+    {
+      "name": "Skyvern",
+      "type": "OSS+Cloud",
+      "license": "AGPL",
+      "weighted_average_v2": 4.23,
+      "best_at": [
+        "web_task_automation_productization"
+      ],
+      "core_identity": "Managed web task automation product."
+    },
+    {
+      "name": "Aider",
+      "type": "OSS",
+      "license": "Apache-2.0",
+      "weighted_average_v2": 4.11,
+      "best_at": [
+        "cli_completeness",
+        "operator_feedback_loop"
+      ],
+      "core_identity": "Excellent terminal-centered developer interaction loop."
+    },
+    {
+      "name": "Crawl4AI",
+      "type": "OSS",
+      "license": "MIT",
+      "weighted_average_v2": 4.03,
+      "best_at": [
+        "ai_crawl_extraction"
+      ],
+      "core_identity": "Accessible AI-first open crawling and extraction."
+    },
+    {
+      "name": "Notion AI",
+      "type": "Closed",
+      "license": "Proprietary",
+      "weighted_average_v2": 3.98,
+      "best_at": [
+        "consumer_search_experience"
+      ],
+      "core_identity": "Strong knowledge work UX, weak trust/governance substrate."
+    },
+    {
+      "name": "Cursor",
+      "type": "Closed",
+      "license": "Proprietary",
+      "weighted_average_v2": 3.92,
+      "best_at": [
+        "operator_feedback_loop"
+      ],
+      "core_identity": "Strong AI coding product UX."
+    },
+    {
+      "name": "AutoGen",
+      "type": "OSS",
+      "license": "MIT",
+      "weighted_average_v2": 3.84,
+      "best_at": [
+        "multi_agent_runtime"
+      ],
+      "core_identity": "Agent runtime and orchestration framework."
+    },
+    {
+      "name": "OpenRecall",
+      "type": "OSS",
+      "license": "AGPL",
+      "weighted_average_v2": 3.78,
+      "best_at": [
+        "personal_memory_ux"
+      ],
+      "core_identity": "Recall-style local memory project."
+    },
+    {
+      "name": "CrewAI",
+      "type": "OSS",
+      "license": "MIT",
+      "weighted_average_v2": 3.63,
+      "best_at": [
+        "multi_agent_runtime"
+      ],
+      "core_identity": "Multi-agent workflow framework."
+    },
+    {
+      "name": "Mem.ai",
+      "type": "Closed",
+      "license": "Proprietary",
+      "weighted_average_v2": 3.58,
+      "best_at": [
+        "consumer_search_experience"
+      ],
+      "core_identity": "Memory UX product rather than infrastructure platform."
+    },
+    {
+      "name": "Instructor",
+      "type": "OSS",
+      "license": "MIT",
+      "weighted_average_v2": 3.41,
+      "best_at": [
+        "structured_generation_ergonomics"
+      ],
+      "core_identity": "Very strong structured generation helper, narrow category coverage."
+    }
+  ],
+  "meta": {
+    "dimension_count": 34,
+    "competitor_count": 32,
+    "danteHarvest_weighted_average_v2": 6.72,
+    "danteHarvest_weighted_average_v2_pre_sprint": 5.42,
+    "sprint_gain": "+0.94",
+    "test_count": 551,
+    "phases_completed": 10,
+    "v1_weighted_average_dh": 8.01,
+    "inflation_delta": -1.65,
+    "closed_gaps": [
+      "ui_reviewer_workflow (5\u00e2\u2020\u20198)",
+      "structured_extraction_endpoints (2\u00e2\u2020\u20197)",
+      "browser_infrastructure (2\u00e2\u2020\u20196)",
+      "trace_and_debug_tooling (4\u00e2\u2020\u20198)",
+      "session_replay_debuggability (3\u00e2\u2020\u20197)",
+      "job_scheduling_and_storage (3\u00e2\u2020\u20197)",
+      "monitoring_and_alerting (2\u00e2\u2020\u20196)",
+      "connector_breadth (3\u00e2\u2020\u20196)",
+      "vector_search_integration (6\u00e2\u2020\u20198)",
+      "anti_bot_bypass (1\u00e2\u2020\u20194)",
+      "crawl_acquisition (6\u00e2\u2020\u20197)",
+      "multi_format_ingest (7\u00e2\u2020\u20198)",
+      "test_coverage (7\u00e2\u2020\u20198)"
+    ],
+    "ceiling_dimensions": [
+      "proxy_network_depth (ceiling 2 \u00e2\u20ac\u201d requires network infrastructure)",
+      "anti_bot_bypass (ceiling 4 \u00e2\u20ac\u201d requires proxy network)",
+      "remote_browser_scalability (ceiling 2 \u00e2\u20ac\u201d requires cloud infrastructure)",
+      "dataset_marketplace (ceiling 3 \u00e2\u20ac\u201d requires curation and hosting)",
+      "platform_ecosystem (ceiling 5 \u00e2\u20ac\u201d requires actor/plugin marketplace)",
+      "no_code_extraction_ux (ceiling 5 \u00e2\u20ac\u201d requires significant visual UX work)"
+    ],
+    "interpretation": "DanteHarvest closed 13 dimension gaps across 10 build phases (+0.94 weighted average). Now competitive vs Bright Data (7.18) on trust dimensions, competitive vs Apify on scheduling, and ahead of Firecrawl on crawl pipeline integration. Remaining structural ceiling: proxy network and cloud browser scale require infrastructure investment beyond local-first scope."
+  }
+}

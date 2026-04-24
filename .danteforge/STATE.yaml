@@ -1,0 +1,26 @@
+project: DanteHarvest
+lastHandoff: initialized
+workflowStage: tasks
+currentPhase: 0
+tasks: {}
+auditLog:
+  - "2026-04-21T21:31:31.187Z | mcp: state read"
+  - "2026-04-21T21:47:59.017Z | mcp: score_all"
+  - "2026-04-21T21:50:38.804Z | mcp: score_all"
+  - "2026-04-21T21:53:13.492Z | mcp: score_all"
+  - "2026-04-21T21:54:20.853Z | mcp: score_all"
+  - "2026-04-21T21:59:19.148Z | mcp: score_all"
+  - "2026-04-21T23:01:37.653Z | mcp: score_all"
+  - "2026-04-21T23:13:29.907Z | mcp: score_all"
+  - "2026-04-21T23:14:03.628Z | mcp: score_all"
+  - "2026-04-21T23:15:00.920Z | mcp: score_all"
+  - "2026-04-21T23:31:21.966Z | mcp: score_all"
+  - "2026-04-21T23:34:02.030Z | mcp: score_all"
+  - "2026-04-21T23:56:32.541Z | mcp: score_all"
+profile: balanced
+constitution: CONSTITUTION.md
+enforcementMode: strict
+projectType: unknown
+selfEditPolicy: deny
+maxBudgetUsd: 10
+routingAggressiveness: balanced

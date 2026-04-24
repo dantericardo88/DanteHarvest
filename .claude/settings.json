@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__plugin_danteforge_danteforge__danteforge_rubric_get",
+      "Skill(update-config)",
+      "Skill(update-config:*)"
+    ]
+  }
+}
