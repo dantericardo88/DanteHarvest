@@ -20,6 +20,11 @@ from uuid import uuid4
 from harvest_core.control.exceptions import HarvestError
 from harvest_core.provenance.chain_entry import ChainEntry
 from harvest_core.provenance.chain_writer import ChainWriter
+from harvest_observe.capture.continuous_capturer import (
+    CaptureSession,
+    ContinuousCapturer,
+    _default_screenshot_fn,
+)
 
 
 class ScreenObservationError(HarvestError):
@@ -202,3 +207,67 @@ class ScreenRecorder:
         ))
 
         return frame
+
+    def start_continuous_capture(
+        self,
+        run_id: str,
+        interval: float = 5.0,
+        screenshot_fn: Optional[Callable[[], bytes]] = None,
+        max_frames: int = 0,
+    ) -> ContinuousCapturer:
+        """
+        Start a background ContinuousCapturer and emit a chain entry.
+
+        Returns the running ContinuousCapturer; caller is responsible for
+        calling ``capturer.stop()`` when done.
+
+        The capturer saves frames to ``<storage_root>/continuous/<session_id>/``.
+        A ``screen.continuous_capture.started`` chain entry is written
+        synchronously (blocking) via a direct append call.  Callers running
+        inside an async context should prefer wrapping this in
+        ``asyncio.get_event_loop().run_in_executor(None, ...)`` if they need
+        non-blocking behaviour.
+
+        Parameters
+        ----------
+        run_id:
+            Provenance run identifier threaded into chain entries.
+        interval:
+            Seconds between frames (default 5).
+        screenshot_fn:
+            Override capture function (useful for testing).  Defaults to the
+            platform screenshot helper in ContinuousCapturer.
+        max_frames:
+            Stop automatically after N frames (0 = unlimited).
+        """
+        storage_root = self.storage_root / "continuous"
+        capturer = ContinuousCapturer(
+            storage_root=str(storage_root),
+            interval=interval,
+            screenshot_fn=screenshot_fn or _default_screenshot_fn,
+            max_frames=max_frames,
+        )
+        capture_session: CaptureSession = capturer.start()
+
+        # Fire-and-forget synchronous chain write (no await — this is a sync method).
+        # The chain_writer.append is a coroutine; schedule it on the running loop
+        # if one exists, otherwise use asyncio.run for the single blocking call.
+        import asyncio
+        entry = ChainEntry(
+            run_id=run_id,
+            signal="screen.continuous_capture.started",
+            machine="screen_recorder",
+            data={
+                "session_id": capture_session.session_id,
+                "storage_dir": capture_session.storage_dir,
+                "interval": interval,
+                "max_frames": max_frames,
+            },
+        )
+        try:
+            loop = asyncio.get_running_loop()
+            loop.create_task(self.chain_writer.append(entry))
+        except RuntimeError:
+            asyncio.run(self.chain_writer.append(entry))
+
+        return capturer
