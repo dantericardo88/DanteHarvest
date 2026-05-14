@@ -13,6 +13,16 @@ Two fetch backends (selected at construction time):
    Enable with: CrawleeAdapter(..., use_js_rendering=True)
    Playwright auto-detected; falls back to HTTP-only if not installed.
 
+Sitemap seeding (optional, enabled by default):
+   When crawl(url) is called, the adapter checks {origin}/sitemap.xml and seeds
+   the RequestQueue with discovered URLs (via SitemapParser).
+   Disable with: CrawleeAdapter(..., use_sitemap=False)
+
+Robots enforcement (optional, enabled by default):
+   Before fetching any URL the adapter verifies it is allowed by robots.txt
+   (via RobotsChecker). Respects Crawl-delay between requests.
+   Disable with: CrawleeAdapter(..., respect_robots=False)
+
 Constitutional guarantees:
 - Local-first: no Playwright required; falls back to urllib HTTP client
 - Fail-closed: empty queue after crawl raises AcquisitionError (not silent empty)
@@ -109,13 +119,20 @@ def _extract_links(html: str, base_url: str) -> List[str]:
     return links
 
 
+def _coerce_str(value: "str | list[str]") -> str:
+    """Coerce extract_content() result (str | List[str]) to str."""
+    if isinstance(value, list):
+        return " ".join(value)
+    return value
+
+
 def _html_to_markdown(html: str, user_query: Optional[str] = None) -> str:
     """Convert HTML to clean text. Uses BM25 content filter when available."""
     try:
         from harvest_acquire.crawl.content_filter import extract_content
         result = extract_content(html, user_query=user_query, join=True)
         if result:
-            return result
+            return _coerce_str(result)
     except Exception:
         pass
     # Fallback: simple regex stripping
@@ -226,6 +243,9 @@ class CrawleeAdapter:
         browser_pool: Optional[Any] = None,
         proxy_url: Optional[str] = None,
         use_stealth_headers: bool = False,
+        use_sitemap: bool = True,
+        respect_robots: bool = True,
+        robots_user_agent: str = "HarvestBot",
     ):
         self._use_js = use_js_rendering and _is_playwright_available()
         self.chain_writer = chain_writer
@@ -233,6 +253,18 @@ class CrawleeAdapter:
         self._browser_pool = browser_pool  # optional PlaywrightPool
         self._proxy_url = proxy_url
         self._stealth = use_stealth_headers
+        self._use_sitemap = use_sitemap
+        self._respect_robots = respect_robots
+        if respect_robots:
+            from harvest_acquire.crawl.robots_checker import RobotsChecker
+            self._robots: Optional[Any] = RobotsChecker(user_agent=robots_user_agent)
+        else:
+            self._robots = None
+        if use_sitemap:
+            from harvest_acquire.crawl.sitemap_parser import SitemapParser
+            self._sitemap: Optional[Any] = SitemapParser()
+        else:
+            self._sitemap = None
 
     @property
     def rendering_mode(self) -> str:
@@ -271,15 +303,36 @@ class CrawleeAdapter:
                 },
             ))
 
+        from urllib.parse import urlparse as _urlparse
         queue = _RequestQueue()
         queue.enqueue(url, depth=0)
+
+        # Seed queue from sitemap if enabled
+        if self._sitemap is not None:
+            _origin = "{0}://{1}".format(*_urlparse(url)[:2])
+            try:
+                _sitemap_urls = self._sitemap.discover_and_parse(url)
+                for _su in _sitemap_urls:
+                    queue.enqueue(_su, depth=0)
+            except Exception:
+                pass  # Sitemap failure never aborts the crawl
 
         pages: List[PageResult] = []
         errors: List[Dict[str, Any]] = []
         total_bytes = 0
 
         while not queue.is_empty and len(pages) < max_pages:
-            current_url, depth = queue.dequeue()
+            _item = queue.dequeue()
+            if _item is None:
+                break
+            current_url, depth = _item
+
+            # Enforce robots.txt before fetching
+            if self._robots is not None:
+                if not self._robots.is_allowed(current_url):
+                    errors.append({"url": current_url, "error": "disallowed by robots.txt"})
+                    continue
+                await self._robots.async_respect_delay(current_url)
 
             try:
                 html, status_code = await self._fetch(current_url)
