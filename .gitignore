@@ -4,7 +4,7 @@ DanteDistillerV2/
 donors/
 
 # ---- Runtime storage ----
-storage/
+/storage/
 
 # ---- Python build artifacts ----
 __pycache__/
@@ -58,3 +58,16 @@ harvest_ui/reviewer/spa/node_modules/
 
 # ---- Ruff / linters ----
 .ruff_cache/
+
+# DanteForge agent hygiene start
+.danteforge/oss-deep/
+.danteforge-worktrees/
+.claude/worktrees/
+.dantecode/
+.tmp-*/
+node_modules/
+coverage/
+test_output.*
+test-output.*
+test-run*.log
+# DanteForge agent hygiene end

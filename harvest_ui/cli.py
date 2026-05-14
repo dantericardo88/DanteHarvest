@@ -561,6 +561,78 @@ def cmd_ingest_s3(args) -> int:
         return 1
 
 
+def cmd_verify_chain(args) -> int:
+    """Verify the Merkle-sealed evidence chain for a run."""
+    from harvest_core.provenance.merkle_chain import MerkleChainManifest
+    from harvest_core.provenance.chain_writer import ChainWriter
+
+    chain_path = Path(args.chain_path)
+    if not chain_path.exists():
+        print(f"error: chain file not found: {chain_path}", file=sys.stderr)
+        return 1
+
+    run_id = args.run_id or chain_path.stem
+    mcm = MerkleChainManifest(chain_path)
+
+    if not mcm.is_sealed():
+        if getattr(args, "seal", False):
+            writer = ChainWriter(chain_path, run_id)
+            entries = writer.read_all()
+            manifest = mcm.seal(entries)
+            print(json.dumps({
+                "status": "sealed",
+                "run_id": run_id,
+                "entry_count": manifest.entry_count,
+                "merkle_root": manifest.merkle_root,
+                "manifest_path": str(mcm.manifest_path),
+            }, indent=2))
+            return 0
+        print(json.dumps({"status": "unsealed", "chain": str(chain_path),
+                          "hint": "run with --seal to seal it"}, indent=2))
+        return 1
+
+    writer = ChainWriter(chain_path, run_id)
+    entries = writer.read_all()
+    ok, reason = mcm.verify(entries)
+
+    result = {
+        "status": "ok" if ok else "tampered",
+        "chain": str(chain_path),
+        "entry_count": len(entries),
+        "merkle_root": mcm.load_manifest().merkle_root if ok else None,
+        "reason": reason,
+    }
+    print(json.dumps(result, indent=2))
+    return 0 if ok else 1
+
+
+def cmd_gc(args) -> int:
+    """Garbage-collect artifacts past their retention window."""
+    from harvest_core.rights.retention_enforcer import RetentionEnforcer
+
+    storage_root = args.storage or "storage"
+    dry_run = getattr(args, "dry_run", False)
+    enforcer = RetentionEnforcer(store_path=Path(storage_root))
+    report = enforcer.gc(dry_run=dry_run)
+
+    if not report:
+        print(json.dumps({"status": "ok", "expired": 0,
+                          "dry_run": dry_run}))
+        return 0
+
+    print(json.dumps({
+        "status": "ok",
+        "expired": len(report),
+        "dry_run": dry_run,
+        "artifacts": [
+            {"artifact_id": ea.artifact_id, "retention_class": ea.retention_class,
+             "expires_at": ea.expires_at}
+            for ea in report
+        ],
+    }, indent=2))
+    return 0
+
+
 def cmd_schedule_run_now(args) -> int:
     from harvest_ui.scheduler.scheduler import HarvestScheduler
     scheduler = HarvestScheduler(storage_root=args.storage)
@@ -686,6 +758,19 @@ def build_parser() -> argparse.ArgumentParser:
     # version
     sub.add_parser("version", help="Print version")
 
+    # verify-chain
+    vc_p = sub.add_parser("verify-chain", help="Verify the Merkle-sealed evidence chain")
+    vc_p.add_argument("chain_path", help="Path to the chain .jsonl file")
+    vc_p.add_argument("--run-id", dest="run_id", default=None,
+                      help="Run ID (defaults to filename stem)")
+    vc_p.add_argument("--seal", action="store_true", default=False,
+                      help="Seal the chain if not yet sealed")
+
+    # gc
+    gc_p = sub.add_parser("gc", help="Garbage-collect expired artifacts")
+    gc_p.add_argument("--dry-run", dest="dry_run", action="store_true", default=False,
+                      help="Print what would be deleted without deleting")
+
     # schedule
     sched = sub.add_parser("schedule", help="Manage recurring harvest jobs")
     sched_sub = sched.add_subparsers(dest="sched_cmd", metavar="SUBCOMMAND")
@@ -780,6 +865,10 @@ def main(argv=None) -> int:
         else:
             print("error: specify 'harvest schedule add|list|remove|run-now'", file=sys.stderr)
             return 1
+    elif args.command == "verify-chain":
+        return cmd_verify_chain(args)
+    elif args.command == "gc":
+        return cmd_gc(args)
     elif args.command == "version":
         return cmd_version(args)
     else:
