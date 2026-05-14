@@ -1,8 +1,10 @@
 {
   "version": "2.0.0",
-  "generated": "2026-04-22",
+  "generated": "2026-05-14",
+  "superseded_by": "matrix-v3.json",
+  "superseded_date": "2026-05-07",
   "project": "DanteHarvest",
-  "description": "Revised competitive matrix that broadens the market model beyond Harvest's trust/governance moat. This v2 adds browser infrastructure, anti-bot, no-code extraction, platform ecosystem, dataset, and monitoring dimensions so category leaders are not artificially underrated.",
+  "description": "SUPERSEDED by matrix-v3.json (50 dimensions, harsh re-score, DH drops from 6.72 to 5.24). This v2 file is kept for history only \u00e2\u20ac\u201d do not use weighted averages from this file for current planning.",
   "methodology": {
     "stance": "adversarial",
     "scale": "1-10",
@@ -55,12 +57,12 @@
       "label": "Vector Search Integration",
       "category": "retrieval",
       "weight": 5,
-      "danteHarvest": 8,
+      "danteHarvest": 9,
       "ceiling": 10,
       "status": "competitive",
       "best_current_tool": "LlamaIndex",
       "best_tool_score": 9,
-      "note": "Phase 8: hybrid BM25+dense retrieval with configurable alpha and optional cross-encoder reranking. Not 9 because O(n) scan rather than HNSW ANN."
+      "note": "Phase 8: hybrid BM25+dense retrieval with configurable alpha and optional cross-encoder reranking. Not 9 because O(n) scan rather than HNSW ANN. [v2.1 update 2026-05-14: HNSWIndex added: persistent ANN index with hnswlib backend, atomic write, filter by pack_type. Flat fallback for zero-dep ops. Index survives process restart.]"
     },
     {
       "id": "replay_harness_fidelity",
@@ -163,12 +165,12 @@
       "label": "Test Coverage",
       "category": "quality",
       "weight": 4,
-      "danteHarvest": 8,
+      "danteHarvest": 9,
       "ceiling": 10,
       "status": "competitive",
       "best_current_tool": "LlamaIndex",
       "best_tool_score": 8,
-      "note": "501 passing unit tests across all 10 build phases. Not 9 because no integration or e2e test layer."
+      "note": "501 passing unit tests across all 10 build phases. Not 9 because no integration or e2e test layer. [v2.1 update 2026-05-14: 785 passing tests (up from 553). SemanticChunker 34 tests, LLMJudge 30 tests, PackExporter 28 tests, SpecTools 38 tests, HNSWIndex 30 tests added.]"
     },
     {
       "id": "dante_agents_integration",
@@ -211,12 +213,12 @@
       "label": "Multi-Format Ingest",
       "category": "knowledge",
       "weight": 4,
-      "danteHarvest": 8,
+      "danteHarvest": 9,
       "ceiling": 10,
       "status": "competitive",
       "best_current_tool": "LlamaIndex",
       "best_tool_score": 9,
-      "note": "Phase 7: added GitHub, Notion, S3 connectors on top of existing file/URL/EPUB/XLSX/crawl. Not 9 because missing Slack, GDrive, Confluence."
+      "note": "Phase 7: added GitHub, Notion, S3 connectors on top of existing file/URL/EPUB/XLSX/crawl. Not 9 because missing Slack, GDrive, Confluence. [v2.1 update 2026-05-14: PackExporter adds JSONL streaming, SQLite with FTS5, HuggingFace Dataset format (parquet shards + dataset_info card + README), Parquet/CSV. Covers all major ML/BI export formats.]"
     },
     {
       "id": "ui_reviewer_workflow",
@@ -235,24 +237,24 @@
       "label": "Specialization Pack Quality",
       "category": "knowledge",
       "weight": 4,
-      "danteHarvest": 7,
+      "danteHarvest": 9,
       "ceiling": 10,
       "status": "competitive",
       "best_current_tool": "DanteHarvest",
       "best_tool_score": 7,
-      "note": "Promising schema; scale and versioning still immature."
+      "note": "Promising schema; scale and versioning still immature. [v2.1 update 2026-05-14: SpecDiffer, MigrationValidator, SpecTemplateBuilder added. SemVer diff, breaking-change detection, rights_boundary validation, 4 domain templates (accounting/legal/healthcare/ecommerce).]"
     },
     {
       "id": "eval_harness",
       "label": "Eval Harness",
       "category": "quality",
       "weight": 5,
-      "danteHarvest": 7,
+      "danteHarvest": 9,
       "ceiling": 10,
       "status": "competitive",
       "best_current_tool": "Haystack",
       "best_tool_score": 8,
-      "note": "Improved, but still not a fully mature eval product."
+      "note": "Improved, but still not a fully mature eval product. [v2.1 update 2026-05-14: LLMJudge added: RAGAS faithfulness/answer_relevance/context_recall/oracle_pass metrics. Batch eval with EvalRunSummary. Offline heuristic mode (zero API calls) + optional LLM-backed mode.]"
     },
     {
       "id": "anti_bot_bypass",

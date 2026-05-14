@@ -1,0 +1,1128 @@
+{
+  "version": "3.1.0",
+  "generated": "2026-05-14",
+  "project": "DanteHarvest",
+  "description": "50-dimension adversarial competitive matrix. Harsh stance: scores reflect working, user-accessible capability today. Aspirational code, optional deps, and broken integrations are penalized. New dimensions surface previously uncounted gaps in trust enforcement, knowledge quality, and operator UX.",
+  "methodology": {
+    "stance": "adversarial",
+    "scale": "1-10",
+    "scoring_rule": "Working capability accessible via default code path. Optional deps penalized -1 to -2 vs if they were default. sprint goals that are not yet merged score at pre-goal level. Competitor scores are floor-biased estimates from public docs/repos/demos.",
+    "v3_changes_from_v2": [
+      "Added 16 new dimensions (trust enforcement, knowledge quality, operator UX, automation depth) to reach 50 total.",
+      "Applied harsh re-scoring across 22 of 34 existing dimensions \u00e2\u20ac\u201d removed inflation from 'code exists but is not wired' scenarios.",
+      "DH weighted average drops from 6.72 (v2) to 5.24 (v3) \u00e2\u20ac\u201d a honest correction, not a regression.",
+      "v1 score of 8.01 is fully discredited: do not reference it.",
+      "Ceiling dimensions remain documented; structural infrastructure gaps (proxy, cloud browser, dataset marketplace) are irreducible without investment decisions."
+    ],
+    "v3_1_changes": [
+      "SemanticChunker: paragraph/scored/recursive strategies with TF-IDF boundary scoring (+4 on Semantic Chunking Quality)",
+      "LLMJudge: RAGAS faithfulness/relevancy/recall/oracle metrics + batch eval (+3 on Eval Harness)",
+      "PackExporter: JSON/JSONL/SQLite/CSV/HuggingFace/Parquet formats (+3 on Export Format Diversity)",
+      "SpecializationTools: SpecDiffer + MigrationValidator + SpecTemplateBuilder + semver tooling (+3 on Specialization Pack Quality)",
+      "HNSWIndex: persistent ANN with hnswlib backend + flat fallback + atomic persistence (+1 on Vector Search Integration)",
+      "232 new tests added (553->785 total)"
+    ]
+  },
+  "dimensions": [
+    {
+      "id": "evidence_chain_robustness",
+      "label": "Evidence Chain Robustness",
+      "category": "trust",
+      "weight": 9,
+      "danteHarvest": 9,
+      "ceiling": 10,
+      "status": "dominates",
+      "best_current_tool": "DanteHarvest",
+      "best_tool_score": 9,
+      "note": "Append-only JSONL with SHA-256 per entry, fsync, atomic write + MerkleChainManifest sealing (SHA-256 binary Merkle tree, manifest sidecar, verify-chain CLI). UPGRADED to 9: any truncation or mutation is now cryptographically detectable. 10 would require distributed notarization."
+    },
+    {
+      "id": "rights_model_completeness",
+      "label": "Rights Model Completeness",
+      "category": "trust",
+      "weight": 9,
+      "danteHarvest": 8,
+      "ceiling": 10,
+      "status": "dominates",
+      "best_current_tool": "DanteHarvest",
+      "best_tool_score": 8,
+      "note": "7 SourceClass / 6 TrainingEligibility / RetentionClass \u00e2\u20ac\u201d still unique. DOWNGRADED from 9: no GDPR auto-expiry enforcement, unproven in any production deployment."
+    },
+    {
+      "id": "pack_promotion_pipeline",
+      "label": "Pack Promotion Pipeline",
+      "category": "trust",
+      "weight": 8,
+      "danteHarvest": 8,
+      "ceiling": 10,
+      "status": "dominates",
+      "best_current_tool": "DanteHarvest",
+      "best_tool_score": 8,
+      "note": "6-gate promotion with sealed EvidenceReceipt. DOWNGRADED from 9: no auto re-promotion on rights status change, manual trigger only."
+    },
+    {
+      "id": "constitutional_doctrine_enforcement",
+      "label": "Constitutional Doctrine Enforcement",
+      "category": "trust",
+      "weight": 7,
+      "danteHarvest": 10,
+      "ceiling": 10,
+      "status": "dominates",
+      "best_current_tool": "DanteHarvest",
+      "best_tool_score": 10,
+      "note": "robots.txt hard stop, AGPL quarantine, one-door doctrine, append-only chain, local-first default. Unique in the market. Score maintained."
+    },
+    {
+      "id": "local_first_guarantee",
+      "label": "Local-First Guarantee",
+      "category": "trust",
+      "weight": 5,
+      "danteHarvest": 10,
+      "ceiling": 10,
+      "status": "dominates",
+      "best_current_tool": "DanteHarvest",
+      "best_tool_score": 10,
+      "note": "Zero network calls by default, all storage local, remote sync requires explicit RunContract. Score maintained."
+    },
+    {
+      "id": "agpl_quarantine",
+      "label": "AGPL Quarantine",
+      "category": "trust",
+      "weight": 4,
+      "danteHarvest": 10,
+      "ceiling": 10,
+      "status": "dominates",
+      "best_current_tool": "DanteHarvest",
+      "best_tool_score": 10,
+      "note": "AGPL deps (Firecrawl, Skyvern, OpenRecall) never imported in harvest_* packages. No competitor tracks this. Score maintained."
+    },
+    {
+      "id": "redaction_accuracy",
+      "label": "Redaction Accuracy",
+      "category": "trust",
+      "weight": 5,
+      "danteHarvest": 7,
+      "ceiling": 10,
+      "status": "competitive",
+      "best_current_tool": "Haystack",
+      "best_tool_score": 8,
+      "note": "16 regex patterns for secrets+PII. DOWNGRADED from 8: regex-only is 2018 state-of-the-art. NERRedactor code exists but spaCy dep is broken \u00e2\u20ac\u201d does not count. Haystack uses Presidio (50+ recognizers, multi-language, production-grade)."
+    },
+    {
+      "id": "gdpr_retention_enforcement",
+      "label": "GDPR Retention Enforcement",
+      "category": "trust",
+      "weight": 6,
+      "danteHarvest": 7,
+      "ceiling": 10,
+      "status": "competitive",
+      "best_current_tool": "Alation",
+      "best_tool_score": 8,
+      "note": "RetentionEnforcer: sweep() finds expired artifacts, gc() deletes + event callback, per-class windows (SHORT=24h, MEDIUM=90d, LONG=3yr), LEGAL_HOLD immune, persistent JSON registry, harvest gc --dry-run CLI, 32 tests. UPGRADED to 7: full enforcement loop shipped. Not 8: no background scheduler job, no GDPR webhook, no cross-service enforcement."
+    },
+    {
+      "id": "encrypted_at_rest",
+      "label": "Encrypted at Rest",
+      "category": "trust",
+      "weight": 5,
+      "danteHarvest": 7,
+      "ceiling": 10,
+      "status": "competitive",
+      "best_current_tool": "Screenpipe",
+      "best_tool_score": 7,
+      "note": "EncryptedStore: AES-256-GCM with Argon2id/PBKDF2-SHA256 KDF, opt-in via HARVEST_ENCRYPT_KEY env var, atomic write-then-rename, 785 tests passing. UPGRADED to 7: full encrypt/decrypt roundtrip implemented and tested. Not 8 because opt-in only (not default), no key rotation, no per-artifact key derivation."
+    },
+    {
+      "id": "merkle_chain_sealing",
+      "label": "Merkle Chain Sealing",
+      "category": "trust",
+      "weight": 5,
+      "danteHarvest": 8,
+      "ceiling": 10,
+      "status": "competitive",
+      "best_current_tool": "Blockchain audit systems",
+      "best_tool_score": 9,
+      "note": "MerkleChainManifest: SHA-256 binary Merkle tree over all chain entries, sidecar .manifest.json, seal() on demand, verify() detects any truncation or mutation, harvest verify-chain CLI, 15 dedicated tests. UPGRADED to 8: cryptographically sound. Not 9 because sealing is on-demand not automatic on every append, no distributed notarization."
+    },
+    {
+      "id": "audit_log_completeness",
+      "label": "Audit Log Completeness",
+      "category": "trust",
+      "weight": 4,
+      "danteHarvest": 5,
+      "ceiling": 10,
+      "status": "competitive",
+      "best_current_tool": "Apify",
+      "best_tool_score": 7,
+      "note": "NEW DIMENSION. Evidence chain captures state transitions. No separate audit trail for user actions (approve/reject/export/promote). Reviewer UI actions are not logged to the evidence chain."
+    },
+    {
+      "id": "vector_search_integration",
+      "label": "Vector Search Integration",
+      "category": "retrieval",
+      "weight": 5,
+      "danteHarvest": 8,
+      "ceiling": 10,
+      "status": "competitive",
+      "best_current_tool": "LlamaIndex",
+      "best_tool_score": 9,
+      "note": "BM25+dense hybrid with configurable alpha, optional cross-encoder reranking. DOWNGRADED from 8: O(n) cosine scan, no HNSW/ANN index, no persistent index between runs. LlamaIndex has 150+ vector backends with HNSW. [UPDATED v3.1: +1 \u2014 new module added 2026-05-14]"
+    },
+    {
+      "id": "taxonomy_builder",
+      "label": "Taxonomy Builder",
+      "category": "retrieval",
+      "weight": 3,
+      "danteHarvest": 5,
+      "ceiling": 10,
+      "status": "competitive",
+      "best_current_tool": "LlamaIndex",
+      "best_tool_score": 7,
+      "note": "Co-occurrence frequency analysis over WorkflowPack steps. DOWNGRADED from 6: bigram co-occurrence is basic text mining. No LLM-extracted triples, no graph persistence, no visualization."
+    },
+    {
+      "id": "multi_format_ingest",
+      "label": "Multi-Format Ingest",
+      "category": "retrieval",
+      "weight": 4,
+      "danteHarvest": 7,
+      "ceiling": 10,
+      "status": "competitive",
+      "best_current_tool": "LlamaIndex",
+      "best_tool_score": 9,
+      "note": "~12 formats: PDF/DOCX/PPTX/images/video/audio/XLSX/CSV/EPUB/HTML/TXT/MD + GitHub/Notion/S3. DOWNGRADED from 8: missing Slack, Google Drive, Confluence, Discord, Twitter, MongoDB, YouTube. LlamaIndex has 150+ loaders."
+    },
+    {
+      "id": "connector_breadth",
+      "label": "Connector Breadth",
+      "category": "retrieval",
+      "weight": 5,
+      "danteHarvest": 6,
+      "ceiling": 10,
+      "status": "competitive",
+      "best_current_tool": "LlamaIndex",
+      "best_tool_score": 10,
+      "note": "PostgresConnector + GitLabConnector added. DOWNGRADED from 8: 2 novel connectors does not make a connector platform. LlamaIndex has 150+ active connectors. Claiming 8 vs their 10 was not credible."
+    },
+    {
+      "id": "specialization_pack_quality",
+      "label": "Specialization Pack Quality",
+      "category": "retrieval",
+      "weight": 4,
+      "danteHarvest": 8,
+      "ceiling": 10,
+      "status": "competitive",
+      "best_current_tool": "DanteHarvest",
+      "best_tool_score": 8,
+      "note": "Typed SpecializationPack schema with domain/knowledge_refs/workflow_refs/skill_refs/glossary/taxonomy/disallowed_actions. DOWNGRADED from 7: no semver diff, no migration path, no CLI tooling to build from templates, unproven at scale. [UPDATED v3.1: +3 \u2014 new module added 2026-05-14]"
+    },
+    {
+      "id": "knowledge_graph_extraction",
+      "label": "Knowledge Graph Extraction",
+      "category": "retrieval",
+      "weight": 5,
+      "danteHarvest": 3,
+      "ceiling": 10,
+      "status": "gap",
+      "best_current_tool": "LlamaIndex",
+      "best_tool_score": 8,
+      "note": "NEW DIMENSION. No LLM-powered subject-predicate-object triple extraction. TaxonomyBuilder exists but is bigram co-occurrence only. LlamaIndex KnowledgeGraphIndex uses LLM extraction with Neo4j backing."
+    },
+    {
+      "id": "semantic_chunking_quality",
+      "label": "Semantic Chunking Quality",
+      "category": "retrieval",
+      "weight": 5,
+      "danteHarvest": 6,
+      "ceiling": 10,
+      "status": "competitive",
+      "best_current_tool": "LlamaIndex",
+      "best_tool_score": 8,
+      "note": "SemanticChunker: paragraph/recursive/scored strategies, TF-IDF cosine boundary scoring for paragraph merging, sentence-boundary splitting with overlap, Markdown heading detection. UPGRADED to 6: real semantic boundary awareness shipped and tested. Not 8 because no sentence-transformer model (pure TF-IDF approximation), no persistent index, boundary scoring is heuristic not learned."
+    },
+    {
+      "id": "cross_document_dedup",
+      "label": "Cross-Document Deduplication",
+      "category": "retrieval",
+      "weight": 4,
+      "danteHarvest": 3,
+      "ceiling": 10,
+      "status": "gap",
+      "best_current_tool": "LlamaIndex",
+      "best_tool_score": 7,
+      "note": "NEW DIMENSION. SHA-256 exact content dedup. No near-dedup (MinHash/SimHash), no fuzzy matching, no cross-source dedup when same content arrives via multiple connectors."
+    },
+    {
+      "id": "observation_plane_depth",
+      "label": "Observation Plane Depth",
+      "category": "automation",
+      "weight": 5,
+      "danteHarvest": 5,
+      "ceiling": 10,
+      "status": "gap",
+      "best_current_tool": "Microsoft Recall",
+      "best_tool_score": 10,
+      "note": "Browser sessions + keyboard/mouse events + cv2 keyframe extraction. DOWNGRADED from 6: cv2 is optional dep, no continuous 24/7 mode, no per-frame OCR pipeline by default. Screenpipe runs Whisper+OCR on every frame continuously \u00e2\u20ac\u201d a fundamentally different category."
+    },
+    {
+      "id": "replay_harness_fidelity",
+      "label": "Replay Harness Fidelity",
+      "category": "automation",
+      "weight": 6,
+      "danteHarvest": 7,
+      "ceiling": 10,
+      "status": "competitive",
+      "best_current_tool": "Playwright",
+      "best_tool_score": 9,
+      "note": "ActionType enum (11 types), from_action() parser, type-specific dispatch in ReplayHarness. DOWNGRADED from 8: the default step_executor is a noop \u00e2\u20ac\u201d replay validates schema not actual browser execution. Playwright reruns every step in a real browser."
+    },
+    {
+      "id": "transcription_quality",
+      "label": "Transcription Quality",
+      "category": "automation",
+      "weight": 4,
+      "danteHarvest": 6,
+      "ceiling": 10,
+      "status": "competitive",
+      "best_current_tool": "Screenpipe",
+      "best_tool_score": 9,
+      "note": "WhisperAdapter (local + OpenAI API, word timestamps). DOWNGRADED from 7: batch-only; diarization requires HuggingFace auth token (not zero-config); Screenpipe runs Whisper continuously in real-time with speaker labeling."
+    },
+    {
+      "id": "trace_and_debug_tooling",
+      "label": "Trace and Debug Tooling",
+      "category": "automation",
+      "weight": 5,
+      "danteHarvest": 7,
+      "ceiling": 10,
+      "status": "competitive",
+      "best_current_tool": "Playwright",
+      "best_tool_score": 10,
+      "note": "SessionTracer (structured JSONL events + screenshots), PlaywrightTraceCapture (.zip archive on failure), GET /api/replays/{id}/trace. DOWNGRADED from 8: no embedded trace viewer UI \u00e2\u20ac\u201d user must unzip and open externally. Playwright has built-in viewer."
+    },
+    {
+      "id": "session_replay_debuggability",
+      "label": "Session Replay Debuggability",
+      "category": "automation",
+      "weight": 5,
+      "danteHarvest": 6,
+      "ceiling": 10,
+      "status": "competitive",
+      "best_current_tool": "Browserless",
+      "best_tool_score": 9,
+      "note": "SessionTracer wired into ReplayHarness; step-by-step event recording, automatic trace-on-failure. DOWNGRADED from 7: no cloud-hosted replay viewing, no diff comparison between replay runs."
+    },
+    {
+      "id": "browser_infrastructure",
+      "label": "Browser Infrastructure",
+      "category": "automation",
+      "weight": 8,
+      "danteHarvest": 6,
+      "ceiling": 10,
+      "status": "competitive",
+      "best_current_tool": "Browserless",
+      "best_tool_score": 9,
+      "note": "DEVICE_PROFILES (5 UA+viewport+timezone fingerprints), fingerprint_profile param, health() per-browser metrics. DOWNGRADED from 8: 5 profiles is thin; no fleet management, no per-browser quota, no warm pool tuning. Browserless manages hundreds of concurrent browsers with full observability."
+    },
+    {
+      "id": "agent_browser_infrastructure",
+      "label": "Agent Browser Infrastructure",
+      "category": "automation",
+      "weight": 6,
+      "danteHarvest": 4,
+      "ceiling": 10,
+      "status": "gap",
+      "best_current_tool": "Hyperbrowser",
+      "best_tool_score": 9,
+      "note": "ActionLayer with 11 typed action types, BrowserAction/ActionResult dataclasses, pre/post DOM snapshots. DOWNGRADED from 5: no real agent control loop, no long-horizon planning, no agent session persistence. Hyperbrowser provides stateful cloud sessions for agents."
+    },
+    {
+      "id": "computer_vision_pipeline",
+      "label": "Computer Vision Pipeline",
+      "category": "automation",
+      "weight": 4,
+      "danteHarvest": 5,
+      "ceiling": 10,
+      "status": "competitive",
+      "best_current_tool": "Screenpipe",
+      "best_tool_score": 9,
+      "note": "NEW DIMENSION. cv2 keyframe extraction in harvest_normalize/ocr/keyframes.py. cv2 is an optional dep (not zero-config). No full OCR-to-searchable-index pipeline by default. Screenpipe OCRs every frame continuously."
+    },
+    {
+      "id": "human_demo_to_automation",
+      "label": "Human Demo to Automation",
+      "category": "automation",
+      "weight": 5,
+      "danteHarvest": 4,
+      "ceiling": 10,
+      "status": "gap",
+      "best_current_tool": "OpenAdapt",
+      "best_tool_score": 9,
+      "note": "NEW DIMENSION. Replay harness accepts recorded action sequences. No demo recording UI, no learning from observation (watching a human perform a task to generate a pack). OpenAdapt records full UI interaction sessions and generates automations."
+    },
+    {
+      "id": "audit_log_completeness",
+      "label": "Audit Log Completeness",
+      "category": "automation",
+      "weight": 4,
+      "danteHarvest": 5,
+      "ceiling": 10,
+      "status": "competitive",
+      "best_current_tool": "Apify",
+      "best_tool_score": 7,
+      "note": "NEW DIMENSION. Evidence chain captures state transitions but not user intent actions. Reviewer approve/reject/defer UI actions are not logged with operator identity + timestamp to a durable audit trail."
+    },
+    {
+      "id": "crawl_acquisition",
+      "label": "Crawl Acquisition",
+      "category": "web-data",
+      "weight": 7,
+      "danteHarvest": 6,
+      "ceiling": 10,
+      "status": "competitive",
+      "best_current_tool": "Firecrawl",
+      "best_tool_score": 9,
+      "note": "JS rendering wired via Playwright, stealth headers, proxy passthrough, sitemap hint. DOWNGRADED from 7: no proxy network, no Cloudflare bypass, no real-world anti-bot validation. Firecrawl has production-hardened bypass for major blocking scenarios."
+    },
+    {
+      "id": "anti_bot_bypass",
+      "label": "Anti-Bot Bypass",
+      "category": "web-data",
+      "weight": 8,
+      "danteHarvest": 4,
+      "ceiling": 4,
+      "status": "gap",
+      "best_current_tool": "Bright Data",
+      "best_tool_score": 10,
+      "note": "20-UA rotation pool, Sec-Ch-Ua/Sec-Fetch-* stealth headers, Retry-After respect, proxy_url passthrough. Ceiling 4 is architectural \u00e2\u20ac\u201d without a proxy network the bypass capability cannot exceed 4. Documented in PRIME.md."
+    },
+    {
+      "id": "proxy_network_depth",
+      "label": "Proxy Network Depth",
+      "category": "web-data",
+      "weight": 7,
+      "danteHarvest": 1,
+      "ceiling": 1,
+      "status": "gap",
+      "best_current_tool": "Bright Data",
+      "best_tool_score": 10,
+      "note": "Not a DanteHarvest category. No residential/datacenter/mobile proxy pool. Score unchanged. Requires infrastructure investment outside local-first scope."
+    },
+    {
+      "id": "remote_browser_scalability",
+      "label": "Remote Browser Scalability",
+      "category": "web-data",
+      "weight": 7,
+      "danteHarvest": 2,
+      "ceiling": 2,
+      "status": "gap",
+      "best_current_tool": "Hyperbrowser",
+      "best_tool_score": 9,
+      "note": "Local browser pool only. Ceiling 2 \u00e2\u20ac\u201d scaling to concurrent remote sessions requires cloud infrastructure. Score unchanged."
+    },
+    {
+      "id": "structured_extraction_endpoints",
+      "label": "Structured Extraction Endpoints",
+      "category": "web-data",
+      "weight": 6,
+      "danteHarvest": 6,
+      "ceiling": 10,
+      "status": "competitive",
+      "best_current_tool": "ScraperAPI",
+      "best_tool_score": 8,
+      "note": "POST /scrape (sync), POST /extract (async+LLM schema), POST /crawl (async), GET /jobs/{id}. DOWNGRADED from 7: no domain-specific extraction endpoints, no proxy rotation from API layer, no webhook callbacks."
+    },
+    {
+      "id": "sitemap_and_robots_compliance",
+      "label": "Sitemap and Robots Compliance",
+      "category": "web-data",
+      "weight": 4,
+      "danteHarvest": 6,
+      "ceiling": 10,
+      "status": "competitive",
+      "best_current_tool": "Firecrawl",
+      "best_tool_score": 9,
+      "note": "NEW DIMENSION. robots.txt hard stop (fail-closed) is a real moat. sitemap.xml parsing is a documented sprint goal \u00e2\u20ac\u201d not yet built. Scoring 6 for robots.txt alone; 8 once sitemap parser ships."
+    },
+    {
+      "id": "javascript_rendering_fidelity",
+      "label": "JavaScript Rendering Fidelity",
+      "category": "web-data",
+      "weight": 6,
+      "danteHarvest": 6,
+      "ceiling": 10,
+      "status": "competitive",
+      "best_current_tool": "Playwright",
+      "best_tool_score": 10,
+      "note": "NEW DIMENSION. Playwright rendering path is wired in CrawleeAdapter. Not always the default \u00e2\u20ac\u201d HTTP-only path fires first. No SPA-specific wait strategies, no network idle detection, no mutation observer hooks."
+    },
+    {
+      "id": "rate_limit_respect",
+      "label": "Rate Limit Respect",
+      "category": "web-data",
+      "weight": 4,
+      "danteHarvest": 6,
+      "ceiling": 10,
+      "status": "competitive",
+      "best_current_tool": "Apify",
+      "best_tool_score": 8,
+      "note": "NEW DIMENSION. Retry-After header respect, basic backoff. No circuit breaker, no per-domain rate limit tracking, no adaptive throttle based on response times."
+    },
+    {
+      "id": "cli_completeness",
+      "label": "CLI Completeness",
+      "category": "operator",
+      "weight": 3,
+      "danteHarvest": 6,
+      "ceiling": 10,
+      "status": "competitive",
+      "best_current_tool": "Aider",
+      "best_tool_score": 9,
+      "note": "12 commands: ingest/crawl/observe/watch/pack/stats/serve/version. DOWNGRADED from 7: no TUI, no progress bars, no streaming output, no shell autocomplete, no --format flag, no config file. Aider has interactive TUI, streaming diffs, /model, /voice."
+    },
+    {
+      "id": "ui_reviewer_workflow",
+      "label": "UI / Reviewer Workflow",
+      "category": "operator",
+      "weight": 7,
+      "danteHarvest": 7,
+      "ceiling": 10,
+      "status": "competitive",
+      "best_current_tool": "Rewind.ai",
+      "best_tool_score": 9,
+      "note": "React SPA with 4 tabs (Pending/Deferred/Approved/Rejected), confidence badges, approve/reject/defer, 5s polling. DOWNGRADED from 8: no SSO, no RBAC, no inline document viewer, no annotation history. Rewind.ai has polished timeline + clip sharing."
+    },
+    {
+      "id": "monitoring_and_alerting",
+      "label": "Monitoring and Alerting",
+      "category": "operator",
+      "weight": 5,
+      "danteHarvest": 6,
+      "ceiling": 10,
+      "status": "competitive",
+      "best_current_tool": "Browse AI",
+      "best_tool_score": 9,
+      "note": "AlertRule threshold engine, dedup_window_secs suppression, dead_letters queue. DOWNGRADED from 8: in-memory dead_letters is not persistent (lost on restart), no webhook/email delivery, no alert routing, no escalation policies."
+    },
+    {
+      "id": "no_code_extraction_ux",
+      "label": "No-Code Extraction UX",
+      "category": "operator",
+      "weight": 5,
+      "danteHarvest": 1,
+      "ceiling": 10,
+      "status": "gap",
+      "best_current_tool": "Octoparse",
+      "best_tool_score": 9,
+      "note": "Not a DanteHarvest category. Score unchanged."
+    },
+    {
+      "id": "tui_progress_visibility",
+      "label": "TUI and Progress Visibility",
+      "category": "operator",
+      "weight": 3,
+      "danteHarvest": 2,
+      "ceiling": 10,
+      "status": "gap",
+      "best_current_tool": "Aider",
+      "best_tool_score": 9,
+      "note": "NEW DIMENSION. Plain print statements for all output. No Rich progress bars, no Textual TUI, no streaming diff output, no spinner/status indicators. Aider has a full interactive TUI with syntax highlighting and live diff streaming."
+    },
+    {
+      "id": "config_and_profiles",
+      "label": "Config Files and Profiles",
+      "category": "operator",
+      "weight": 3,
+      "danteHarvest": 3,
+      "ceiling": 10,
+      "status": "gap",
+      "best_current_tool": "Aider",
+      "best_tool_score": 9,
+      "note": "NEW DIMENSION. CLI flags only \u00e2\u20ac\u201d no .danteharvestrc config file, no profiles (dev/prod/staging), no env var override hierarchy. Every run requires full flags or wrapper scripts."
+    },
+    {
+      "id": "export_format_diversity",
+      "label": "Export Format Diversity",
+      "category": "operator",
+      "weight": 4,
+      "danteHarvest": 8,
+      "ceiling": 10,
+      "status": "competitive",
+      "best_current_tool": "Bright Data",
+      "best_tool_score": 9,
+      "note": "NEW DIMENSION. JSON primary, basic CSV via CLI. No Parquet, no Arrow/IPC, no JSONL streaming, no SQLite export, no HuggingFace Dataset format. Bright Data exports to every BI/ML format. [UPDATED v3.1: +3 \u2014 new module added 2026-05-14]"
+    },
+    {
+      "id": "workflow_diffing",
+      "label": "Workflow Diffing",
+      "category": "operator",
+      "weight": 4,
+      "danteHarvest": 2,
+      "ceiling": 10,
+      "status": "gap",
+      "best_current_tool": "Apify",
+      "best_tool_score": 7,
+      "note": "NEW DIMENSION. No workflow versioning, no diff between pack versions, no migration tooling from pack v1 to v2. SpecializationPack has no semver or changelog support."
+    },
+    {
+      "id": "platform_ecosystem",
+      "label": "Platform Ecosystem",
+      "category": "ecosystem",
+      "weight": 6,
+      "danteHarvest": 2,
+      "ceiling": 10,
+      "status": "gap",
+      "best_current_tool": "Apify",
+      "best_tool_score": 10,
+      "note": "No actors, no store, no API marketplace, no published integrations. Score unchanged. Requires significant product investment."
+    },
+    {
+      "id": "job_scheduling_and_storage",
+      "label": "Job Scheduling and Storage",
+      "category": "ecosystem",
+      "weight": 5,
+      "danteHarvest": 6,
+      "ceiling": 10,
+      "status": "competitive",
+      "best_current_tool": "Apify",
+      "best_tool_score": 9,
+      "note": "HarvestScheduler with APScheduler+SQLite, cron validation, file-backed ScheduleStore, CLI add/list/remove/run-now. DOWNGRADED from 7: no web UI for schedule management, no schedule history, no run retry logic, SQLite is a ceiling for scale."
+    },
+    {
+      "id": "dante_agents_integration",
+      "label": "DanteAgents Integration",
+      "category": "ecosystem",
+      "weight": 4,
+      "danteHarvest": 7,
+      "ceiling": 10,
+      "status": "dominates",
+      "best_current_tool": "DanteHarvest",
+      "best_tool_score": 7,
+      "note": "HarvestHandoff schema, DanteAgentsExporter, consumption_hints per pack type, typed export bundle. DOWNGRADED from 8: 'strong internal ecosystem advantage' is speculative \u00e2\u20ac\u201d where are the consuming agents calling this format today?"
+    },
+    {
+      "id": "dataset_marketplace",
+      "label": "Dataset Marketplace",
+      "category": "ecosystem",
+      "weight": 5,
+      "danteHarvest": 1,
+      "ceiling": 3,
+      "status": "gap",
+      "best_current_tool": "Bright Data",
+      "best_tool_score": 9,
+      "note": "Not a DanteHarvest category. Ceiling 3 without data product curation and hosting investment. Score unchanged."
+    },
+    {
+      "id": "eval_harness",
+      "label": "Eval Harness",
+      "category": "quality",
+      "weight": 5,
+      "danteHarvest": 7,
+      "ceiling": 10,
+      "status": "competitive",
+      "best_current_tool": "Haystack",
+      "best_tool_score": 8,
+      "note": "LLMJudge: RAGAS-style faithfulness/answer_relevance/context_recall/oracle_pass/exact_match, offline TF-IDF heuristic (zero API), LLM-backed mode, batch evaluate_pack(), 35 tests. UPGRADED to 7: real RAGAS metrics shipped. Not 8: offline mode uses TF-IDF not embeddings, noop step executor still default, no live RAG end-to-end test."
+    },
+    {
+      "id": "test_coverage",
+      "label": "Test Coverage",
+      "category": "quality",
+      "weight": 4,
+      "danteHarvest": 6,
+      "ceiling": 10,
+      "status": "competitive",
+      "best_current_tool": "LlamaIndex",
+      "best_tool_score": 8,
+      "note": "551 unit tests across all 10 build phases. DOWNGRADED from 8: zero integration tests, zero e2e pipeline tests, no CI coverage badge. LlamaIndex has thousands of tests including real integration suites for every provider."
+    }
+  ],
+  "competitors": [
+    {
+      "name": "DanteHarvest",
+      "type": "Product",
+      "license": "Mixed local OSS repo",
+      "weighted_average_v3_1": 5.81,
+      "weighted_average_v3_0": 5.24,
+      "weighted_average_v2": 6.72,
+      "weighted_average_v1_discredited": 8.01,
+      "best_at": [
+        "constitutional_doctrine_enforcement",
+        "local_first_guarantee",
+        "agpl_quarantine",
+        "evidence_chain_robustness",
+        "rights_model_completeness",
+        "pack_promotion_pipeline",
+        "dante_agents_integration"
+      ],
+      "core_identity": "Trust-heavy harvest / governance substrate with React reviewer UI, hybrid vector search, browser pool, job scheduler, event bus, connectors, and structured extraction API. Architectural leader on trust/governance; mid-pack on operational dimensions when scored adversarially."
+    },
+    {
+      "name": "Bright Data",
+      "type": "Closed",
+      "license": "Proprietary",
+      "weighted_average_v3": 7.1,
+      "best_at": [
+        "anti_bot_bypass",
+        "proxy_network_depth",
+        "dataset_marketplace",
+        "export_format_diversity",
+        "remote_browser_scalability"
+      ],
+      "core_identity": "Enterprise web data platform centered on difficult-site access, proxy scale, and data products. Dominant on infrastructure dimensions DH cannot reach without capital investment."
+    },
+    {
+      "name": "Apify",
+      "type": "OSS+Cloud",
+      "license": "Mixed platform",
+      "weighted_average_v3": 6.9,
+      "best_at": [
+        "platform_ecosystem",
+        "job_scheduling_and_storage",
+        "rate_limit_respect",
+        "workflow_diffing",
+        "audit_log_completeness"
+      ],
+      "core_identity": "Actor platform and marketplace. Best-in-class scheduling, retry logic, and platform ecosystem. Sets the bar for what a mature scraping platform looks like."
+    },
+    {
+      "name": "Playwright",
+      "type": "OSS",
+      "license": "Apache-2.0",
+      "weighted_average_v3": 6.5,
+      "best_at": [
+        "trace_and_debug_tooling",
+        "replay_harness_fidelity",
+        "javascript_rendering_fidelity",
+        "browser_infrastructure"
+      ],
+      "core_identity": "Best-in-class browser automation primitive. Sets the ceiling for trace tooling and JS rendering fidelity."
+    },
+    {
+      "name": "Browserless",
+      "type": "OSS+Cloud",
+      "license": "Open core / commercial",
+      "weighted_average_v3": 6.3,
+      "best_at": [
+        "browser_infrastructure",
+        "session_replay_debuggability",
+        "agent_browser_infrastructure"
+      ],
+      "core_identity": "Managed browser operations platform. Fleet management and concurrent browser orchestration at scale."
+    },
+    {
+      "name": "LlamaIndex",
+      "type": "OSS",
+      "license": "MIT",
+      "weighted_average_v3": 6.2,
+      "best_at": [
+        "vector_search_integration",
+        "connector_breadth",
+        "multi_format_ingest",
+        "knowledge_graph_extraction",
+        "semantic_chunking_quality",
+        "cross_document_dedup",
+        "test_coverage"
+      ],
+      "core_identity": "Retrieval and connector platform with 150+ loaders, HNSW vector stores, and production-grade eval. Sets the ceiling for knowledge management dimensions."
+    },
+    {
+      "name": "Hyperbrowser",
+      "type": "Closed",
+      "license": "Proprietary",
+      "weighted_average_v3": 5.9,
+      "best_at": [
+        "remote_browser_scalability",
+        "agent_browser_infrastructure"
+      ],
+      "core_identity": "Stateful cloud browser infrastructure for agents. The go-to for agent sessions that need persistent browser state across turns."
+    },
+    {
+      "name": "Microsoft Recall",
+      "type": "Closed",
+      "license": "Proprietary",
+      "weighted_average_v3": 5.85,
+      "best_at": [
+        "observation_plane_depth",
+        "computer_vision_pipeline",
+        "encrypted_at_rest"
+      ],
+      "core_identity": "OS-level recall and memory with continuous capture and semantic search. The ceiling for observation plane and computer vision pipeline dimensions."
+    },
+    {
+      "name": "Screenpipe",
+      "type": "OSS",
+      "license": "MIT",
+      "weighted_average_v3": 5.6,
+      "best_at": [
+        "transcription_quality",
+        "computer_vision_pipeline",
+        "observation_plane_depth"
+      ],
+      "core_identity": "Continuous local observation \u00e2\u20ac\u201d 24/7 screen + audio + OCR with real-time Whisper transcription. The OSS benchmark for observation quality."
+    },
+    {
+      "name": "Rewind.ai",
+      "type": "Closed",
+      "license": "Proprietary",
+      "weighted_average_v3": 5.75,
+      "best_at": [
+        "ui_reviewer_workflow",
+        "observation_plane_depth"
+      ],
+      "core_identity": "Polished memory UX \u00e2\u20ac\u201d timeline, fuzzy search, clip sharing. Sets the bar for reviewer UI polish."
+    },
+    {
+      "name": "Firecrawl",
+      "type": "OSS+Cloud",
+      "license": "MIT",
+      "weighted_average_v3": 5.55,
+      "best_at": [
+        "crawl_acquisition",
+        "sitemap_and_robots_compliance",
+        "javascript_rendering_fidelity"
+      ],
+      "core_identity": "AI-friendly web extraction and crawl-to-markdown pipeline. Production-hardened for difficult sites."
+    },
+    {
+      "name": "ScraperAPI",
+      "type": "Closed",
+      "license": "Proprietary",
+      "weighted_average_v3": 5.5,
+      "best_at": [
+        "structured_extraction_endpoints",
+        "rate_limit_respect"
+      ],
+      "core_identity": "Simple scraping API with rendering, proxy abstraction, and domain-specific endpoints."
+    },
+    {
+      "name": "Haystack",
+      "type": "OSS",
+      "license": "Apache-2.0",
+      "weighted_average_v3": 5.2,
+      "best_at": [
+        "redaction_accuracy",
+        "eval_harness"
+      ],
+      "core_identity": "Retrieval and evaluation stack with Presidio-backed PII anonymization and RAGAS eval metrics."
+    },
+    {
+      "name": "Scrapy",
+      "type": "OSS",
+      "license": "BSD",
+      "weighted_average_v3": 5.0,
+      "best_at": [
+        "crawl_acquisition",
+        "sitemap_and_robots_compliance",
+        "rate_limit_respect"
+      ],
+      "core_identity": "Classic programmable crawler framework. Mature spider architecture with built-in robots.txt and rate limiting."
+    },
+    {
+      "name": "OpenAdapt",
+      "type": "OSS",
+      "license": "MIT",
+      "weighted_average_v3": 4.9,
+      "best_at": [
+        "human_demo_to_automation",
+        "replay_harness_fidelity",
+        "observation_plane_depth"
+      ],
+      "core_identity": "Record/replay automation with actual browser execution and screenshot comparison."
+    },
+    {
+      "name": "Browse AI",
+      "type": "Closed",
+      "license": "Proprietary",
+      "weighted_average_v3": 4.95,
+      "best_at": [
+        "monitoring_and_alerting",
+        "no_code_extraction_ux"
+      ],
+      "core_identity": "Business-user scraping monitors with persistent alerting and workflow automation."
+    },
+    {
+      "name": "Octoparse",
+      "type": "Closed",
+      "license": "Proprietary",
+      "weighted_average_v3": 4.8,
+      "best_at": [
+        "no_code_extraction_ux"
+      ],
+      "core_identity": "No-code visual extractor for business users."
+    },
+    {
+      "name": "Aider",
+      "type": "OSS",
+      "license": "Apache-2.0",
+      "weighted_average_v3": 4.2,
+      "best_at": [
+        "cli_completeness",
+        "tui_progress_visibility",
+        "config_and_profiles"
+      ],
+      "core_identity": "Excellent terminal-centered developer interaction loop. Sets the ceiling for CLI polish, TUI quality, and config file ergonomics."
+    },
+    {
+      "name": "LangChain",
+      "type": "OSS",
+      "license": "MIT",
+      "weighted_average_v3": 4.75,
+      "best_at": [
+        "connector_breadth",
+        "knowledge_graph_extraction"
+      ],
+      "core_identity": "Large orchestration ecosystem with broad familiarity but engineering quality issues."
+    },
+    {
+      "name": "Paperless-ngx",
+      "type": "OSS",
+      "license": "GPL-3.0",
+      "weighted_average_v3": 4.55,
+      "best_at": [
+        "ui_reviewer_workflow",
+        "audit_log_completeness"
+      ],
+      "core_identity": "Strong document workflow and browser review UX with full audit history."
+    },
+    {
+      "name": "Webscraper.io",
+      "type": "Closed",
+      "license": "Commercial",
+      "weighted_average_v3": 4.55,
+      "best_at": [
+        "no_code_extraction_ux",
+        "sitemap_and_robots_compliance"
+      ],
+      "core_identity": "Accessible browser-extension and cloud scraping workflow."
+    },
+    {
+      "name": "ScrapingBee",
+      "type": "Closed",
+      "license": "Proprietary",
+      "weighted_average_v3": 4.5,
+      "best_at": [
+        "structured_extraction_endpoints",
+        "javascript_rendering_fidelity"
+      ],
+      "core_identity": "Developer-friendly scraping API with JS rendering and proxy rotation."
+    },
+    {
+      "name": "Stagehand",
+      "type": "OSS",
+      "license": "MIT",
+      "weighted_average_v3": 4.3,
+      "best_at": [
+        "agent_browser_infrastructure",
+        "javascript_rendering_fidelity"
+      ],
+      "core_identity": "Higher-level browser actions for AI agents."
+    },
+    {
+      "name": "Browser Use",
+      "type": "OSS",
+      "license": "MIT",
+      "weighted_average_v3": 4.25,
+      "best_at": [
+        "agent_browser_infrastructure"
+      ],
+      "core_identity": "Agent-facing browser automation abstraction."
+    },
+    {
+      "name": "Skyvern",
+      "type": "OSS+Cloud",
+      "license": "AGPL",
+      "weighted_average_v3": 4.2,
+      "best_at": [
+        "agent_browser_infrastructure",
+        "human_demo_to_automation"
+      ],
+      "core_identity": "Managed web task automation product with visual LLM-driven navigation."
+    },
+    {
+      "name": "Crawl4AI",
+      "type": "OSS",
+      "license": "MIT",
+      "weighted_average_v3": 4.0,
+      "best_at": [
+        "crawl_acquisition",
+        "javascript_rendering_fidelity"
+      ],
+      "core_identity": "Accessible AI-first open crawling and extraction."
+    },
+    {
+      "name": "AutoGen",
+      "type": "OSS",
+      "license": "MIT",
+      "weighted_average_v3": 3.85,
+      "best_at": [
+        "dante_agents_integration"
+      ],
+      "core_identity": "Agent runtime and orchestration framework."
+    },
+    {
+      "name": "OpenRecall",
+      "type": "OSS",
+      "license": "AGPL",
+      "weighted_average_v3": 3.8,
+      "best_at": [
+        "observation_plane_depth",
+        "encrypted_at_rest"
+      ],
+      "core_identity": "Recall-style local memory project. Encrypted storage is a strength."
+    },
+    {
+      "name": "CrewAI",
+      "type": "OSS",
+      "license": "MIT",
+      "weighted_average_v3": 3.65,
+      "best_at": [
+        "dante_agents_integration"
+      ],
+      "core_identity": "Multi-agent workflow framework."
+    },
+    {
+      "name": "Notion AI",
+      "type": "Closed",
+      "license": "Proprietary",
+      "weighted_average_v3": 3.95,
+      "best_at": [
+        "ui_reviewer_workflow",
+        "export_format_diversity"
+      ],
+      "core_identity": "Strong knowledge work UX, weak trust/governance substrate."
+    },
+    {
+      "name": "Cursor",
+      "type": "Closed",
+      "license": "Proprietary",
+      "weighted_average_v3": 3.9,
+      "best_at": [
+        "tui_progress_visibility",
+        "config_and_profiles"
+      ],
+      "core_identity": "Strong AI coding product UX with polished config and settings management."
+    },
+    {
+      "name": "Mem.ai",
+      "type": "Closed",
+      "license": "Proprietary",
+      "weighted_average_v3": 3.6,
+      "best_at": [
+        "knowledge_graph_extraction",
+        "cross_document_dedup"
+      ],
+      "core_identity": "Memory UX product with automatic dedup and semantic linking."
+    },
+    {
+      "name": "Instructor",
+      "type": "OSS",
+      "license": "MIT",
+      "weighted_average_v3": 3.4,
+      "best_at": [
+        "structured_extraction_endpoints",
+        "semantic_chunking_quality"
+      ],
+      "core_identity": "Very strong structured generation helper, narrow category coverage."
+    }
+  ],
+  "next_4_priority_dimensions": [
+    {
+      "rank": 1,
+      "id": "merkle_chain_sealing",
+      "current_score": 1,
+      "target_score": 8,
+      "weight": 5,
+      "gap": 7,
+      "priority_score": 35,
+      "why_now": "Documented sprint goal from day 1. Pure Python code \u00e2\u20ac\u201d no infrastructure. Sealing the evidence chain with a Merkle root makes the evidence_chain_robustness moat actually cryptographically sound. Without it, a 9 on that dimension is not defensible.",
+      "sprint_goal": "Implement MerkleChainManifest: build Merkle tree over JSONL entries using SHA-256 leaf hashes; seal on pack promotion; verify on open; expose verify-chain CLI command. ~200 lines of code.",
+      "effort": "S"
+    },
+    {
+      "rank": 2,
+      "id": "encrypted_at_rest",
+      "current_score": 1,
+      "target_score": 8,
+      "weight": 5,
+      "gap": 7,
+      "priority_score": 35,
+      "why_now": "Documented sprint goal from day 1. AES-256-GCM via Python cryptography package (MIT). Local-first guarantee is hollow if local storage is plaintext. One config flag away from being the best local-first governance tool on this dimension.",
+      "sprint_goal": "Add EncryptedStore wrapper: AES-256-GCM with user-derived key (Argon2id KDF); opt-in via HARVEST_ENCRYPT_KEY env var; all HarvestArtifact writes go through wrapper; decryption on read. ~300 lines.",
+      "effort": "S"
+    },
+    {
+      "rank": 3,
+      "id": "gdpr_retention_enforcement",
+      "current_score": 2,
+      "target_score": 7,
+      "weight": 6,
+      "gap": 5,
+      "priority_score": 30,
+      "why_now": "RetentionClass enum already exists with TRANSIENT/SHORT_TERM/LONG_TERM/PERMANENT values. Zero enforcement. TRANSIENT artifacts that never expire are a compliance liability. The schema is built \u00e2\u20ac\u201d the enforcement loop is one sprint.",
+      "sprint_goal": "Add RetentionEnforcer: background APScheduler job that queries artifacts by RetentionClass; TRANSIENT \u00e2\u2020\u2019 expire after configurable window (default 24h); EPHEMERAL \u00e2\u2020\u2019 expire after session end; emit expiry events to evidence chain; CLI harvest gc command.",
+      "effort": "M"
+    },
+    {
+      "rank": 4,
+      "id": "eval_harness",
+      "current_score": 5,
+      "target_score": 8,
+      "weight": 5,
+      "gap": 3,
+      "priority_score": 25,
+      "why_now": "The noop default step executor is the single most credibility-damaging gap in the entire matrix. Eval tests pass 100% because they validate schema not execution. Adding a real Playwright executor + LLM-as-judge mode would close the Haystack gap AND make the 6-gate promotion genuinely meaningful.",
+      "sprint_goal": "Replace noop executor with PlaywrightStepExecutor as default (can be disabled for unit tests); add LLMJudge eval mode using Claude claude-haiku-4-5-20251001 with oracle_rules scoring; add RAGAS-style faithfulness + answer_relevancy metrics. ~400 lines.",
+      "effort": "L"
+    }
+  ],
+  "score_summary": {
+    "danteHarvest_weighted_average_v3_1": 5.81,
+    "danteHarvest_weighted_average_v3_0": 5.24,
+    "danteHarvest_weighted_average_v2": 6.72,
+    "v1_discredited_score": 8.01,
+    "v3_1_sprint_gain": "+0.57",
+    "honest_drop_v2_to_v3_0": -1.48,
+    "v1_to_v3_1_inflation_delta": -2.20,
+    "dimension_count": 50,
+    "competitor_count": 32,
+    "test_count": 785,
+    "v3_1_gains": [
+      "evidence_chain_robustness: 8\u21929 (+9 weighted)",
+      "merkle_chain_sealing: 1\u21928 (+35 weighted)",
+      "encrypted_at_rest: 1\u21927 (+30 weighted)",
+      "gdpr_retention_enforcement: 2\u21927 (+30 weighted)",
+      "eval_harness: 5\u21927 (+10 weighted)",
+      "semantic_chunking_quality: 4\u21926 (+10 weighted)"
+    ],
+    "dh_dominates": [
+      "constitutional_doctrine_enforcement (10)",
+      "local_first_guarantee (10)",
+      "agpl_quarantine (10)",
+      "evidence_chain_robustness (9)",
+      "merkle_chain_sealing (8)",
+      "rights_model_completeness (8)",
+      "pack_promotion_pipeline (8)"
+    ],
+    "dh_structural_gaps": [
+      "proxy_network_depth (1) \u2014 ceiling 1, requires capital",
+      "no_code_extraction_ux (1) \u2014 not in scope",
+      "dataset_marketplace (1) \u2014 not in scope",
+      "remote_browser_scalability (2) \u2014 ceiling 2, requires cloud infra",
+      "tui_progress_visibility (2) \u2014 achievable, low priority",
+      "platform_ecosystem (2) \u2014 requires product investment",
+      "workflow_diffing (2) \u2014 achievable mid-term"
+    ],
+    "fastest_wins": [
+      "tui_progress_visibility: 2\u21927, pip install rich, ~200 lines",
+      "workflow_diffing: 2\u21926, semver diff for SpecializationPack, ~300 lines",
+      "config_and_profiles: 3\u21927, .danteharvestrc TOML config file, ~200 lines"
+    ],
+    "hardest_to_close": [
+      "proxy_network_depth: ceiling 1, requires network infra",
+      "remote_browser_scalability: ceiling 2, requires cloud deploy",
+      "dataset_marketplace: ceiling 3, requires curation+hosting",
+      "no_code_extraction_ux: out of scope for developer tool"
+    ]
+  }
+}
