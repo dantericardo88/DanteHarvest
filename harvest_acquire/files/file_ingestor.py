@@ -16,7 +16,6 @@ from __future__ import annotations
 
 import hashlib
 import shutil
-from datetime import datetime
 from pathlib import Path
 from typing import Optional
 from uuid import uuid4
@@ -26,12 +25,38 @@ from harvest_core.control.exceptions import AcquisitionError
 from harvest_core.provenance.chain_entry import ChainEntry
 from harvest_core.provenance.chain_writer import ChainWriter
 from harvest_core.rights.rights_model import RightsProfile, SourceClass, default_rights_for
+from harvest_acquire.loaders.spreadsheet_loader import SpreadsheetLoader
+from harvest_acquire.loaders.email_loader import EmailLoader
+from harvest_acquire.loaders.json_loader import JSONLoader
 
 
 _VIDEO_SUFFIXES = {".mp4", ".mov", ".avi", ".mkv", ".webm", ".m4v"}
 _AUDIO_SUFFIXES = {".mp3", ".wav", ".m4a", ".flac", ".ogg", ".aac"}
 _IMAGE_SUFFIXES = {".png", ".jpg", ".jpeg", ".gif", ".bmp", ".tiff", ".webp"}
 _DOCUMENT_SUFFIXES = {".pdf", ".docx", ".pptx", ".xlsx", ".txt", ".md", ".html"}
+_SPREADSHEET_SUFFIXES = {".xlsx", ".xls", ".xlsm", ".csv", ".ods"}
+_EMAIL_SUFFIXES = {".eml", ".mbox"}
+_JSON_SUFFIXES = {".json", ".jsonl"}
+
+_LOADERS: dict = {}  # populated lazily to keep imports fast
+
+
+def _get_spreadsheet_loader() -> SpreadsheetLoader:
+    if "spreadsheet" not in _LOADERS:
+        _LOADERS["spreadsheet"] = SpreadsheetLoader()
+    return _LOADERS["spreadsheet"]
+
+
+def _get_email_loader() -> EmailLoader:
+    if "email" not in _LOADERS:
+        _LOADERS["email"] = EmailLoader()
+    return _LOADERS["email"]
+
+
+def _get_json_loader() -> JSONLoader:
+    if "json" not in _LOADERS:
+        _LOADERS["json"] = JSONLoader()
+    return _LOADERS["json"]
 
 
 def _compute_sha256(path: Path) -> str:
@@ -50,6 +75,12 @@ def _detect_source_type(path: Path) -> str:
         return "audio"
     if suffix in _IMAGE_SUFFIXES:
         return "image"
+    if suffix in _SPREADSHEET_SUFFIXES:
+        return "spreadsheet"
+    if suffix in _EMAIL_SUFFIXES:
+        return "email"
+    if suffix in _JSON_SUFFIXES:
+        return "json"
     if suffix in _DOCUMENT_SUFFIXES:
         return "document"
     return "unknown"
@@ -123,6 +154,19 @@ class FileIngestor:
             shutil.copy2(path, dest_path)
             storage_uri = f"local://{dest_path}"
 
+            # Invoke format-specific loaders for structured formats.
+            # record_count surfaces in the chain entry below.
+            record_count: Optional[int] = None
+            if source_type == "spreadsheet":
+                docs = _get_spreadsheet_loader().load(path)
+                record_count = sum(s.row_count for d in docs for s in d.sheets)
+            elif source_type == "email":
+                docs = _get_email_loader().load(path)
+                record_count = len(docs)
+            elif source_type == "json":
+                docs = _get_json_loader().load(path)
+                record_count = sum(d.record_count for d in docs)
+
             # Build typed artifact
             if source_type == "video":
                 artifact = RawVideoAsset(
@@ -144,8 +188,8 @@ class FileIngestor:
                     sha256=sha256,
                 )
             else:
-                # Documents and images use RawVideoAsset as a generic raw container
-                # until a document-specific raw artifact type is added in Phase 2.
+                # Documents, images, spreadsheets, emails, JSON use RawVideoAsset as a
+                # generic raw container until format-specific artifact types are added.
                 artifact = RawVideoAsset(
                     asset_id=artifact_id,
                     source_type=source_type,
@@ -168,6 +212,7 @@ class FileIngestor:
                     "file_size_bytes": path.stat().st_size,
                     "rights_status": rp.review_status.value,
                     "training_eligibility": rp.training_eligibility.value,
+                    "record_count": record_count,
                 },
             ))
 
