@@ -1,3 +1,4 @@
+# PYTHON_ARGCOMPLETE_OK
 """
 harvest CLI — operator entry point for DANTEHARVEST.
 
@@ -25,12 +26,67 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import csv
+import io
 import json
 import sys
 from pathlib import Path
 
 
 __version__ = "0.1.0"
+
+_SUPPORTED_FORMATS = ("table", "json", "csv")
+
+
+# ---------------------------------------------------------------------------
+# Output formatting helpers
+# ---------------------------------------------------------------------------
+
+def _format_pack_list(entries, fmt: str) -> str:
+    """Format a list of pack registry entries as table, json, or csv."""
+    if fmt == "json":
+        return json.dumps(
+            [
+                {
+                    "pack_id": e.pack_id,
+                    "pack_type": e.pack_type,
+                    "promotion_status": e.promotion_status,
+                    "title": e.title,
+                }
+                for e in entries
+            ],
+            indent=2,
+        )
+    if fmt == "csv":
+        buf = io.StringIO()
+        writer = csv.writer(buf)
+        writer.writerow(["pack_id", "pack_type", "promotion_status", "title"])
+        for e in entries:
+            writer.writerow([e.pack_id, e.pack_type, e.promotion_status, e.title])
+        return buf.getvalue().rstrip()
+    # default: table
+    lines = []
+    for e in entries:
+        lines.append(f"  [{e.promotion_status:12s}] {e.pack_type:25s} {e.pack_id}  {e.title}")
+    return "\n".join(lines)
+
+
+def _format_stats(stats: dict, fmt: str) -> str:
+    """Format registry stats as table, json, or csv."""
+    if fmt == "json":
+        return json.dumps(stats, indent=2)
+    if fmt == "csv":
+        buf = io.StringIO()
+        writer = csv.writer(buf)
+        writer.writerow(["key", "value"])
+        for k, v in stats.items():
+            writer.writerow([k, v])
+        return buf.getvalue().rstrip()
+    # default: table
+    lines = []
+    for k, v in stats.items():
+        lines.append(f"  {k:<30s} {v}")
+    return "\n".join(lines)
 
 
 # ---------------------------------------------------------------------------
@@ -123,6 +179,7 @@ async def cmd_ingest_batch(args) -> int:
     from harvest_acquire.files.file_ingestor import FileIngestor
     from harvest_core.provenance.chain_writer import ChainWriter
     from harvest_core.rights.rights_model import SourceClass, default_rights_for
+    from rich.progress import Progress, SpinnerColumn, BarColumn, TextColumn, TimeElapsedColumn
 
     directory = Path(args.directory)
     if not directory.is_dir():
@@ -150,12 +207,24 @@ async def cmd_ingest_batch(args) -> int:
 
     results = []
     errors = []
-    for file in files:
-        try:
-            result = await ingestor.ingest(path=file, run_id=run_id, rights_profile=rights)
-            results.append({"file": str(file), "artifact_id": result.artifact_id, "sha256": result.sha256})
-        except Exception as e:
-            errors.append({"file": str(file), "error": str(e)})
+
+    with Progress(
+        SpinnerColumn(),
+        TextColumn("[progress.description]{task.description}"),
+        BarColumn(),
+        TextColumn("{task.completed}/{task.total}"),
+        TimeElapsedColumn(),
+        transient=True,
+    ) as progress:
+        task = progress.add_task(f"Ingesting {len(files)} files…", total=len(files))
+        for file in files:
+            progress.update(task, description=f"[cyan]{file.name}[/cyan]")
+            try:
+                result = await ingestor.ingest(path=file, run_id=run_id, rights_profile=rights)
+                results.append({"file": str(file), "artifact_id": result.artifact_id, "sha256": result.sha256})
+            except Exception as e:
+                errors.append({"file": str(file), "error": str(e)})
+            progress.advance(task)
 
     print(json.dumps({
         "status": "ok",
@@ -318,6 +387,7 @@ def cmd_pack_list(args) -> int:
     from harvest_index.registry.pack_registry import PackRegistry
 
     root = args.registry or "registry"
+    fmt = getattr(args, "format", "table") or "table"
     try:
         registry = PackRegistry(root=root)
         entries = registry.list(
@@ -325,10 +395,14 @@ def cmd_pack_list(args) -> int:
             status=getattr(args, "status", None),
         )
         if not entries:
-            print("No packs registered.")
+            if fmt == "json":
+                print("[]")
+            elif fmt == "csv":
+                print("pack_id,pack_type,promotion_status,title")
+            else:
+                print("No packs registered.")
             return 0
-        for e in entries:
-            print(f"  [{e.promotion_status:12s}] {e.pack_type:25s} {e.pack_id}  {e.title}")
+        print(_format_pack_list(entries, fmt))
         return 0
     except Exception as e:
         print(f"error: {e}", file=sys.stderr)
@@ -372,25 +446,72 @@ def cmd_registry_stats(args) -> int:
     from harvest_index.registry.pack_registry import PackRegistry
 
     root = args.registry or "registry"
+    fmt = getattr(args, "format", "table") or "table"
     try:
         registry = PackRegistry(root=root)
         stats = registry.stats()
-        print(json.dumps(stats, indent=2))
+        print(_format_stats(stats, fmt))
         return 0
     except Exception as e:
         print(f"error: {e}", file=sys.stderr)
         return 1
 
 
+# ---------------------------------------------------------------------------
+# Watch command — watchdog-powered filesystem monitoring
+# ---------------------------------------------------------------------------
+
+class _HarvestEventHandler:
+    """Watchdog file-system event handler that auto-ingests new/modified files."""
+
+    def __init__(self, ingestor, run_id: str, rights, loop: asyncio.AbstractEventLoop):
+        self._ingestor = ingestor
+        self._run_id = run_id
+        self._rights = rights
+        self._loop = loop
+
+    # watchdog calls these synchronously from a background thread
+    def on_created(self, event) -> None:
+        if not event.is_directory:
+            self._handle(event.src_path, "created")
+
+    def on_modified(self, event) -> None:
+        if not event.is_directory:
+            self._handle(event.src_path, "modified")
+
+    def _handle(self, src_path: str, event_type: str) -> None:
+        path = Path(src_path)
+        if path.suffix.lower() not in _INGESTABLE_SUFFIXES:
+            return
+        print(json.dumps({"event": event_type, "file": str(path)}))
+        future = asyncio.run_coroutine_threadsafe(
+            self._ingest(path), self._loop
+        )
+        try:
+            future.result(timeout=60)
+        except Exception as exc:
+            print(json.dumps({"event": "error", "file": str(path), "error": str(exc)}),
+                  file=sys.stderr)
+
+    async def _ingest(self, path: Path) -> None:
+        result = await self._ingestor.ingest(
+            path=path, run_id=self._run_id, rights_profile=self._rights
+        )
+        print(json.dumps({
+            "event": "ingested",
+            "file": str(path),
+            "artifact_id": result.artifact_id,
+        }))
+
+
 async def cmd_watch(args) -> int:
     """
-    Watch a directory for new files and auto-ingest them as they appear.
-    Uses watchdog if available; falls back to polling every --interval seconds.
+    Watch a directory for new/modified files and auto-ingest them.
+    Uses watchdog when available; falls back to polling every --interval seconds.
     """
     from harvest_acquire.files.file_ingestor import FileIngestor
     from harvest_core.provenance.chain_writer import ChainWriter
     from harvest_core.rights.rights_model import SourceClass, default_rights_for
-    import time
 
     directory = Path(args.directory)
     if not directory.is_dir():
@@ -407,11 +528,48 @@ async def cmd_watch(args) -> int:
     ingestor = FileIngestor(writer, storage_root=storage_root)
     rights = default_rights_for(SourceClass.OWNED_INTERNAL)
 
+    # Try watchdog first
+    try:
+        from watchdog.observers import Observer
+        from watchdog.events import FileSystemEventHandler
+
+        loop = asyncio.get_event_loop()
+        harvest_handler = _HarvestEventHandler(ingestor, run_id, rights, loop)
+
+        # Wrap our handler so watchdog can call it
+        class _WatchdogBridge(FileSystemEventHandler):
+            def on_created(self, event):  # type: ignore[override]
+                harvest_handler.on_created(event)
+
+            def on_modified(self, event):  # type: ignore[override]
+                harvest_handler.on_modified(event)
+
+        observer = Observer()
+        observer.schedule(_WatchdogBridge(), str(directory), recursive=True)
+        observer.start()
+        print(f"watching {directory} (watchdog, Ctrl+C to stop)")
+        try:
+            while True:
+                await asyncio.sleep(1)
+        except KeyboardInterrupt:
+            pass
+        finally:
+            observer.stop()
+            observer.join()
+        print("\nwatch stopped.")
+        return 0
+
+    except ImportError:
+        pass  # fall back to polling
+
+    # Polling fallback
+    import time
+
     seen: set = set(
         f for f in directory.glob("**/*")
         if f.is_file() and f.suffix.lower() in _INGESTABLE_SUFFIXES
     )
-    print(f"watching {directory} (interval={interval}s, {len(seen)} existing files skipped)")
+    print(f"watching {directory} (polling interval={interval}s, {len(seen)} existing files skipped)")
 
     try:
         while True:
@@ -731,6 +889,11 @@ def build_parser() -> argparse.ArgumentParser:
     pack_list = pack_sub.add_parser("list", help="List registered packs")
     pack_list.add_argument("--type", default=None, help="Filter by pack type")
     pack_list.add_argument("--status", default=None, help="Filter by status")
+    pack_list.add_argument(
+        "--format", dest="format", default="table",
+        choices=_SUPPORTED_FORMATS,
+        help="Output format: table (default), json, csv",
+    )
 
     pack_promote = pack_sub.add_parser("promote", help="Promote a CANDIDATE pack")
     pack_promote.add_argument("pack_id", help="Pack ID to promote")
@@ -748,7 +911,12 @@ def build_parser() -> argparse.ArgumentParser:
     watch_p.add_argument("--interval", type=int, default=5, help="Poll interval in seconds (default: 5)")
 
     # stats
-    sub.add_parser("stats", help="Show pack registry statistics")
+    stats_p = sub.add_parser("stats", help="Show pack registry statistics")
+    stats_p.add_argument(
+        "--format", dest="format", default="table",
+        choices=_SUPPORTED_FORMATS,
+        help="Output format: table (default), json, csv",
+    )
 
     # serve
     serve_p = sub.add_parser("serve", help="Start the pack reviewer web server")
@@ -801,7 +969,13 @@ def build_parser() -> argparse.ArgumentParser:
 # ---------------------------------------------------------------------------
 
 def main(argv=None) -> int:
-    parser = build_parser()
+    try:
+        import argcomplete
+        parser = build_parser()
+        argcomplete.autocomplete(parser)
+    except ImportError:
+        parser = build_parser()
+
     args = parser.parse_args(argv)
 
     if args.command == "ingest":
