@@ -1,39 +1,27 @@
 {
-  "allGreen": true,
+  "allGreen": false,
   "target": 9,
-  "passing": 44,
-  "failing": 0,
+  "passing": 5,
+  "failing": 39,
   "blocked": 0,
   "total": 44,
-  "matrixVersion": "3.6.0",
-  "weightedAverage": 8.02,
-  "scoringMethod": "adversarial-code-inspection",
+  "matrixVersion": "3.7.0",
+  "weightedAverage": 6.59,
+  "scoringMethod": "adversarial-code-inspection-3-agents",
   "checkedAt": "2026-05-15T00:00:00.000Z",
-  "failingDimensions": [],
-  "blockedDimensions": [],
   "ceilingLockedDimensions": [
-    "proxy_network_depth",
-    "remote_browser_scalability",
-    "dataset_marketplace",
-    "anti_bot_bypass",
-    "no_code_extraction_ux",
-    "platform_ecosystem"
+    "proxy_network_depth", "remote_browser_scalability",
+    "dataset_marketplace", "anti_bot_bypass",
+    "no_code_extraction_ux", "platform_ecosystem"
   ],
-  "waveHistory": [
-    {
-      "wave": 1,
-      "dimensions": ["constitutional_doctrine_enforcement", "agpl_quarantine", "agent_browser_infrastructure", "structured_extraction_endpoints", "pack_promotion_pipeline", "replay_harness_fidelity", "job_scheduling_and_storage"],
-      "tests_after": 1904
-    },
-    {
-      "wave": 2,
-      "dimensions": ["knowledge_graph_extraction", "human_demo_to_automation", "gdpr_retention_enforcement", "encrypted_at_rest"],
-      "tests_after": 1976
-    },
-    {
-      "wave": 3,
-      "dimensions": ["javascript_rendering_fidelity", "observation_plane_depth", "connector_breadth", "transcription_quality", "computer_vision_pipeline", "redaction_accuracy"],
-      "tests_after": 2094
-    }
+  "passingAt9": [
+    "rights_model_completeness", "cross_document_dedup",
+    "crawl_acquisition", "config_and_profiles", "workflow_diffing"
+  ],
+  "topPriorities": [
+    {"id": "replay_harness_fidelity",             "score": 5, "weight": 6, "priority": 24, "issue": "click/type/fill SIMULATED not real browser"},
+    {"id": "constitutional_doctrine_enforcement",  "score": 6, "weight": 7, "priority": 21, "issue": "RunContractEnforcer opt-in only, not wired by default"},
+    {"id": "agpl_quarantine",                     "score": 5, "weight": 4, "priority": 16, "issue": "23-pkg list, warnings-only, not wired automatically"},
+    {"id": "browser_infrastructure",              "score": 7, "weight": 8, "priority": 16, "issue": "health passive, max_pages=10 too low"}
   ]
 }
