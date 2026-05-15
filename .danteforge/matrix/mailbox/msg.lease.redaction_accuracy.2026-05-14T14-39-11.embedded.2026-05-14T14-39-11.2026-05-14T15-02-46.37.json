@@ -1,0 +1,15 @@
+{
+  "messageId": "msg.lease.redaction_accuracy.2026-05-14T14-39-11.embedded.2026-05-14T14-39-11.2026-05-14T15-02-46.37",
+  "type": "merge_ready",
+  "fromLease": "lease.redaction_accuracy.2026-05-14T14-39-11.embedded.2026-05-14T14-39-11",
+  "toLease": "broadcast",
+  "summary": "Embedded host completed lease lease.redaction_accuracy.2026-05-14T14-39-11.embedded.2026-05-14T14-39-11 with 0 file change(s). Verify-court can review.",
+  "impact": "informational",
+  "requiresAck": false,
+  "status": "pending_ack",
+  "createdAt": "2026-05-14T15:02:46.562Z",
+  "metadata": {
+    "workPacketId": "work.redaction_accuracy.2026-05-14T14-39-11",
+    "filesChanged": []
+  }
+}

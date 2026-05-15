@@ -1,0 +1,701 @@
+{
+  "generatedAt": "2026-05-14T12:56:39.481Z",
+  "nodes": [
+    {
+      "dimensionId": "evidence_chain_robustness",
+      "name": "Evidence Chain Robustness",
+      "category": "reliability",
+      "targetScore": 9,
+      "currentScore": 9,
+      "touches": [],
+      "dependsOnDimensions": [],
+      "evidenceRequired": [
+        "Implementation passes typecheck and tests",
+        "Score moves from 9 toward 9.5",
+        "Harvest pattern from Add Merkle-root manifest sealing so any truncation of the chain is cryptographically detectable"
+      ],
+      "frontierLeaderId": "competitor.ms-recall",
+      "ossFrontierScore": 9,
+      "closedFrontierScore": 9,
+      "gapVsTarget": 0,
+      "gapVsOssFrontier": 0,
+      "gapVsClosedFrontier": 0
+    },
+    {
+      "dimensionId": "rights_model_completeness",
+      "name": "Rights Model Completeness",
+      "category": "compliance",
+      "targetScore": 9,
+      "currentScore": 9,
+      "touches": [],
+      "dependsOnDimensions": [],
+      "evidenceRequired": [
+        "Implementation passes typecheck and tests",
+        "Score moves from 9 toward 9.5",
+        "Harvest pattern from Already best-in-class. Add GDPR retention enforcement (auto-expiry on RetentionClass.TRANSIENT)."
+      ],
+      "frontierLeaderId": "competitor.paperless-ngx",
+      "ossFrontierScore": 9,
+      "closedFrontierScore": 9,
+      "gapVsTarget": 0,
+      "gapVsOssFrontier": 0,
+      "gapVsClosedFrontier": 0
+    },
+    {
+      "dimensionId": "pack_promotion_pipeline",
+      "name": "Pack Promotion Pipeline",
+      "category": "features",
+      "targetScore": 9,
+      "currentScore": 9,
+      "touches": [],
+      "dependsOnDimensions": [],
+      "evidenceRequired": [
+        "Implementation passes typecheck and tests",
+        "Score moves from 9 toward 9.5",
+        "Harvest pattern from Add automated re-promotion on rights status change (currently requires manual trigger)"
+      ],
+      "frontierLeaderId": "competitor.openadapt",
+      "ossFrontierScore": 9,
+      "closedFrontierScore": 9,
+      "gapVsTarget": 0,
+      "gapVsOssFrontier": 0,
+      "gapVsClosedFrontier": 0
+    },
+    {
+      "dimensionId": "vector_search_integration",
+      "name": "Vector Search Integration",
+      "category": "performance",
+      "targetScore": 9,
+      "currentScore": 7,
+      "touches": [],
+      "dependsOnDimensions": [],
+      "evidenceRequired": [
+        "Implementation passes typecheck and tests",
+        "Score moves from 7 toward 9",
+        "Harvest pattern from Add local sentence-transformers embedding as default when model is cached; fall back to TF-IDF on cold start"
+      ],
+      "frontierLeaderId": "competitor.llamaindex",
+      "ossFrontierScore": 9,
+      "closedFrontierScore": 7,
+      "gapVsTarget": 2,
+      "gapVsOssFrontier": 2,
+      "gapVsClosedFrontier": 0
+    },
+    {
+      "dimensionId": "replay_harness_fidelity",
+      "name": "Replay Harness Fidelity",
+      "category": "quality",
+      "targetScore": 9,
+      "currentScore": 8,
+      "touches": [],
+      "dependsOnDimensions": [],
+      "evidenceRequired": [
+        "Implementation passes typecheck and tests",
+        "Score moves from 8 toward 9",
+        "Harvest pattern from Add Playwright-based step executor so replay runs in a real browser sandbox, not just a noop executor"
+      ],
+      "frontierLeaderId": "competitor.openadapt",
+      "ossFrontierScore": 8,
+      "closedFrontierScore": 8,
+      "gapVsTarget": 1,
+      "gapVsOssFrontier": 0,
+      "gapVsClosedFrontier": 0
+    },
+    {
+      "dimensionId": "redaction_accuracy",
+      "name": "Redaction Accuracy",
+      "category": "compliance",
+      "targetScore": 9,
+      "currentScore": 7,
+      "touches": [],
+      "dependsOnDimensions": [],
+      "evidenceRequired": [
+        "Implementation passes typecheck and tests",
+        "Score moves from 7 toward 9",
+        "Harvest pattern from Add presidio (MIT) or spaCy NER for context-aware PII detection beyond regex patterns"
+      ],
+      "frontierLeaderId": "competitor.haystack",
+      "ossFrontierScore": 8,
+      "closedFrontierScore": 7,
+      "gapVsTarget": 2,
+      "gapVsOssFrontier": 1,
+      "gapVsClosedFrontier": 0
+    },
+    {
+      "dimensionId": "cli_completeness",
+      "name": "CLI Completeness",
+      "category": "ux",
+      "targetScore": 9,
+      "currentScore": 7,
+      "touches": [],
+      "dependsOnDimensions": [],
+      "evidenceRequired": [
+        "Implementation passes typecheck and tests",
+        "Score moves from 7 toward 9",
+        "Harvest pattern from Add `harvest ingest batch <dir>` for directory sweep + `harvest watch <dir>` for filesystem monitoring"
+      ],
+      "frontierLeaderId": "competitor.aider",
+      "ossFrontierScore": 9,
+      "closedFrontierScore": 7,
+      "gapVsTarget": 2,
+      "gapVsOssFrontier": 2,
+      "gapVsClosedFrontier": 0
+    },
+    {
+      "dimensionId": "observation_plane_depth",
+      "name": "Observation Plane Depth",
+      "category": "features",
+      "targetScore": 9,
+      "currentScore": 7,
+      "touches": [],
+      "dependsOnDimensions": [],
+      "evidenceRequired": [
+        "Implementation passes typecheck and tests",
+        "Score moves from 7 toward 9",
+        "Harvest pattern from Wire keyframe extractor (harvest_normalize/ocr/keyframes.py) into session_recorder so video files are auto-decomposed"
+      ],
+      "frontierLeaderId": "competitor.ms-recall",
+      "ossFrontierScore": 9,
+      "closedFrontierScore": 10,
+      "gapVsTarget": 2,
+      "gapVsOssFrontier": 2,
+      "gapVsClosedFrontier": 3
+    },
+    {
+      "dimensionId": "taxonomy_builder",
+      "name": "Taxonomy Builder",
+      "category": "features",
+      "targetScore": 9,
+      "currentScore": 7,
+      "touches": [],
+      "dependsOnDimensions": [],
+      "evidenceRequired": [
+        "Implementation passes typecheck and tests",
+        "Score moves from 7 toward 9",
+        "Harvest pattern from Add LLM-enhanced taxonomy enrichment path (optional, local-first: uses Ollama or OpenAI when configured)"
+      ],
+      "frontierLeaderId": "competitor.llamaindex",
+      "ossFrontierScore": 7,
+      "closedFrontierScore": 7,
+      "gapVsTarget": 2,
+      "gapVsOssFrontier": 0,
+      "gapVsClosedFrontier": 0
+    },
+    {
+      "dimensionId": "crawl_acquisition",
+      "name": "Crawl Acquisition",
+      "category": "features",
+      "targetScore": 9,
+      "currentScore": 8,
+      "touches": [],
+      "dependsOnDimensions": [],
+      "evidenceRequired": [
+        "Implementation passes typecheck and tests",
+        "Score moves from 8 toward 9",
+        "Harvest pattern from Add sitemap.xml parser to seed RequestQueue; add robots.txt crawl-delay respect to Crawlee adapter"
+      ],
+      "frontierLeaderId": "competitor.firecrawl",
+      "ossFrontierScore": 9,
+      "closedFrontierScore": 8,
+      "gapVsTarget": 1,
+      "gapVsOssFrontier": 1,
+      "gapVsClosedFrontier": 0
+    },
+    {
+      "dimensionId": "transcription_quality",
+      "name": "Transcription Quality",
+      "category": "performance",
+      "targetScore": 9,
+      "currentScore": 7,
+      "touches": [],
+      "dependsOnDimensions": [],
+      "evidenceRequired": [
+        "Implementation passes typecheck and tests",
+        "Score moves from 7 toward 9",
+        "Harvest pattern from Add pyannote.audio (MIT) for speaker diarization so multi-speaker sessions produce per-speaker transcript segments"
+      ],
+      "frontierLeaderId": "competitor.screenpipe",
+      "ossFrontierScore": 9,
+      "closedFrontierScore": 9,
+      "gapVsTarget": 2,
+      "gapVsOssFrontier": 2,
+      "gapVsClosedFrontier": 2
+    },
+    {
+      "dimensionId": "constitutional_doctrine_enforcement",
+      "name": "Constitutional Doctrine Enforcement",
+      "category": "compliance",
+      "targetScore": 9,
+      "currentScore": 10,
+      "touches": [],
+      "dependsOnDimensions": [],
+      "evidenceRequired": [
+        "Implementation passes typecheck and tests",
+        "Score moves from 10 toward 10",
+        "Harvest pattern from Already best-in-class. Add constitutional test suite that verifies each guarantee via adversarial testing."
+      ],
+      "frontierLeaderId": "competitor.screenpipe",
+      "ossFrontierScore": 10,
+      "closedFrontierScore": 10,
+      "gapVsTarget": 0,
+      "gapVsOssFrontier": 0,
+      "gapVsClosedFrontier": 0
+    },
+    {
+      "dimensionId": "test_coverage",
+      "name": "Test Coverage",
+      "category": "quality",
+      "targetScore": 9,
+      "currentScore": 7,
+      "touches": [],
+      "dependsOnDimensions": [],
+      "evidenceRequired": [
+        "Implementation passes typecheck and tests",
+        "Score moves from 7 toward 9",
+        "Harvest pattern from Add property-based tests with Hypothesis for chain integrity and receipt tamper detection"
+      ],
+      "frontierLeaderId": "competitor.llamaindex",
+      "ossFrontierScore": 8,
+      "closedFrontierScore": 7,
+      "gapVsTarget": 2,
+      "gapVsOssFrontier": 1,
+      "gapVsClosedFrontier": 0
+    },
+    {
+      "dimensionId": "dante_agents_integration",
+      "name": "DanteAgents Integration",
+      "category": "features",
+      "targetScore": 9,
+      "currentScore": 8,
+      "touches": [],
+      "dependsOnDimensions": [],
+      "evidenceRequired": [
+        "Implementation passes typecheck and tests",
+        "Score moves from 8 toward 9",
+        "Harvest pattern from Add streaming export (emit packs as they're promoted, not batch-only) for real-time DanteAgents consumption"
+      ],
+      "frontierLeaderId": "competitor.autogen",
+      "ossFrontierScore": 8,
+      "closedFrontierScore": 8,
+      "gapVsTarget": 1,
+      "gapVsOssFrontier": 0,
+      "gapVsClosedFrontier": 0
+    },
+    {
+      "dimensionId": "local_first_guarantee",
+      "name": "Local-First Guarantee",
+      "category": "reliability",
+      "targetScore": 9,
+      "currentScore": 10,
+      "touches": [],
+      "dependsOnDimensions": [],
+      "evidenceRequired": [
+        "Implementation passes typecheck and tests",
+        "Score moves from 10 toward 10",
+        "Harvest pattern from Already best-in-class. Add encrypted-at-rest option for local storage (AES-256 via cryptography package)."
+      ],
+      "frontierLeaderId": "competitor.screenpipe",
+      "ossFrontierScore": 10,
+      "closedFrontierScore": 10,
+      "gapVsTarget": 0,
+      "gapVsOssFrontier": 0,
+      "gapVsClosedFrontier": 0
+    },
+    {
+      "dimensionId": "agpl_quarantine",
+      "name": "AGPL Quarantine",
+      "category": "compliance",
+      "targetScore": 9,
+      "currentScore": 10,
+      "touches": [],
+      "dependsOnDimensions": [],
+      "evidenceRequired": [
+        "Implementation passes typecheck and tests",
+        "Score moves from 10 toward 10",
+        "Harvest pattern from Already best-in-class. Add CI gate (import-linter or license-checker) to enforce AGPL quarantine automatically."
+      ],
+      "frontierLeaderId": "competitor.instructor",
+      "ossFrontierScore": 10,
+      "closedFrontierScore": 10,
+      "gapVsTarget": 0,
+      "gapVsOssFrontier": 0,
+      "gapVsClosedFrontier": 0
+    },
+    {
+      "dimensionId": "multi_format_ingest",
+      "name": "Multi-Format Ingest",
+      "category": "features",
+      "targetScore": 9,
+      "currentScore": 7,
+      "touches": [],
+      "dependsOnDimensions": [],
+      "evidenceRequired": [
+        "Implementation passes typecheck and tests",
+        "Score moves from 7 toward 9",
+        "Harvest pattern from Add spreadsheet ingest (openpyxl: MIT) to FileIngestor for XLSX/CSV with table-to-markdown conversion"
+      ],
+      "frontierLeaderId": "competitor.llamaindex",
+      "ossFrontierScore": 9,
+      "closedFrontierScore": 7,
+      "gapVsTarget": 2,
+      "gapVsOssFrontier": 2,
+      "gapVsClosedFrontier": 0
+    },
+    {
+      "dimensionId": "ui_reviewer_workflow",
+      "name": "UI / Reviewer Workflow",
+      "category": "ux",
+      "targetScore": 9,
+      "currentScore": 6,
+      "touches": [],
+      "dependsOnDimensions": [],
+      "evidenceRequired": [
+        "Implementation passes typecheck and tests",
+        "Score moves from 6 toward 9",
+        "Harvest pattern from Build harvest_ui/reviewer/server.py â€” a FastAPI server serving a React reviewer UI: pack diff, approve/reject, merge/split segments, confidence band visualization"
+      ],
+      "frontierLeaderId": "competitor.rewind-ai",
+      "ossFrontierScore": 8,
+      "closedFrontierScore": 9,
+      "gapVsTarget": 3,
+      "gapVsOssFrontier": 2,
+      "gapVsClosedFrontier": 3
+    },
+    {
+      "dimensionId": "specialization_pack_quality",
+      "name": "Specialization Pack Quality",
+      "category": "features",
+      "targetScore": 9,
+      "currentScore": 7,
+      "touches": [],
+      "dependsOnDimensions": [],
+      "evidenceRequired": [
+        "Implementation passes typecheck and tests",
+        "Score moves from 7 toward 9",
+        "Harvest pattern from Add pack versioning with semver diff (breaking vs additive changes) and migration path between pack versions"
+      ],
+      "frontierLeaderId": "competitor.llamaindex",
+      "ossFrontierScore": 7,
+      "closedFrontierScore": 7,
+      "gapVsTarget": 2,
+      "gapVsOssFrontier": 0,
+      "gapVsClosedFrontier": 0
+    },
+    {
+      "dimensionId": "eval_harness",
+      "name": "Eval Harness",
+      "category": "quality",
+      "targetScore": 9,
+      "currentScore": 8,
+      "touches": [],
+      "dependsOnDimensions": [],
+      "evidenceRequired": [
+        "Implementation passes typecheck and tests",
+        "Score moves from 8 toward 9",
+        "Harvest pattern from Add LLM-as-judge eval mode: optional oracle that uses Claude/GPT to score step outputs against oracle_rules"
+      ],
+      "frontierLeaderId": "competitor.haystack",
+      "ossFrontierScore": 8,
+      "closedFrontierScore": 8,
+      "gapVsTarget": 1,
+      "gapVsOssFrontier": 0,
+      "gapVsClosedFrontier": 0
+    }
+  ],
+  "competitors": [
+    {
+      "id": "competitor.firecrawl",
+      "name": "firecrawl",
+      "category": "oss",
+      "inspectionMode": "source_available",
+      "confidence": 0.9,
+      "provenance": [
+        {
+          "type": "manual_note",
+          "capturedAt": "2026-05-14T12:56:39.481Z",
+          "note": "imported from compete-matrix.json"
+        }
+      ]
+    },
+    {
+      "id": "competitor.screenpipe",
+      "name": "screenpipe",
+      "category": "oss",
+      "inspectionMode": "source_available",
+      "confidence": 0.9,
+      "provenance": [
+        {
+          "type": "manual_note",
+          "capturedAt": "2026-05-14T12:56:39.481Z",
+          "note": "imported from compete-matrix.json"
+        }
+      ]
+    },
+    {
+      "id": "competitor.openadapt",
+      "name": "openadapt",
+      "category": "oss",
+      "inspectionMode": "source_available",
+      "confidence": 0.9,
+      "provenance": [
+        {
+          "type": "manual_note",
+          "capturedAt": "2026-05-14T12:56:39.481Z",
+          "note": "imported from compete-matrix.json"
+        }
+      ]
+    },
+    {
+      "id": "competitor.llamaindex",
+      "name": "llamaindex",
+      "category": "oss",
+      "inspectionMode": "source_available",
+      "confidence": 0.9,
+      "provenance": [
+        {
+          "type": "manual_note",
+          "capturedAt": "2026-05-14T12:56:39.481Z",
+          "note": "imported from compete-matrix.json"
+        }
+      ]
+    },
+    {
+      "id": "competitor.langchain",
+      "name": "langchain",
+      "category": "oss",
+      "inspectionMode": "source_available",
+      "confidence": 0.9,
+      "provenance": [
+        {
+          "type": "manual_note",
+          "capturedAt": "2026-05-14T12:56:39.481Z",
+          "note": "imported from compete-matrix.json"
+        }
+      ]
+    },
+    {
+      "id": "competitor.haystack",
+      "name": "haystack",
+      "category": "oss",
+      "inspectionMode": "source_available",
+      "confidence": 0.9,
+      "provenance": [
+        {
+          "type": "manual_note",
+          "capturedAt": "2026-05-14T12:56:39.481Z",
+          "note": "imported from compete-matrix.json"
+        }
+      ]
+    },
+    {
+      "id": "competitor.crawl4ai",
+      "name": "crawl4ai",
+      "category": "oss",
+      "inspectionMode": "source_available",
+      "confidence": 0.9,
+      "provenance": [
+        {
+          "type": "manual_note",
+          "capturedAt": "2026-05-14T12:56:39.481Z",
+          "note": "imported from compete-matrix.json"
+        }
+      ]
+    },
+    {
+      "id": "competitor.browser-use",
+      "name": "browser_use",
+      "category": "oss",
+      "inspectionMode": "source_available",
+      "confidence": 0.9,
+      "provenance": [
+        {
+          "type": "manual_note",
+          "capturedAt": "2026-05-14T12:56:39.481Z",
+          "note": "imported from compete-matrix.json"
+        }
+      ]
+    },
+    {
+      "id": "competitor.stagehand",
+      "name": "stagehand",
+      "category": "oss",
+      "inspectionMode": "source_available",
+      "confidence": 0.9,
+      "provenance": [
+        {
+          "type": "manual_note",
+          "capturedAt": "2026-05-14T12:56:39.481Z",
+          "note": "imported from compete-matrix.json"
+        }
+      ]
+    },
+    {
+      "id": "competitor.skyvern",
+      "name": "skyvern",
+      "category": "oss",
+      "inspectionMode": "source_available",
+      "confidence": 0.9,
+      "provenance": [
+        {
+          "type": "manual_note",
+          "capturedAt": "2026-05-14T12:56:39.481Z",
+          "note": "imported from compete-matrix.json"
+        }
+      ]
+    },
+    {
+      "id": "competitor.openrecall",
+      "name": "openrecall",
+      "category": "oss",
+      "inspectionMode": "source_available",
+      "confidence": 0.9,
+      "provenance": [
+        {
+          "type": "manual_note",
+          "capturedAt": "2026-05-14T12:56:39.481Z",
+          "note": "imported from compete-matrix.json"
+        }
+      ]
+    },
+    {
+      "id": "competitor.paperless-ngx",
+      "name": "paperless_ngx",
+      "category": "oss",
+      "inspectionMode": "source_available",
+      "confidence": 0.9,
+      "provenance": [
+        {
+          "type": "manual_note",
+          "capturedAt": "2026-05-14T12:56:39.481Z",
+          "note": "imported from compete-matrix.json"
+        }
+      ]
+    },
+    {
+      "id": "competitor.autogen",
+      "name": "autogen",
+      "category": "oss",
+      "inspectionMode": "source_available",
+      "confidence": 0.9,
+      "provenance": [
+        {
+          "type": "manual_note",
+          "capturedAt": "2026-05-14T12:56:39.481Z",
+          "note": "imported from compete-matrix.json"
+        }
+      ]
+    },
+    {
+      "id": "competitor.crewai",
+      "name": "crewai",
+      "category": "oss",
+      "inspectionMode": "source_available",
+      "confidence": 0.9,
+      "provenance": [
+        {
+          "type": "manual_note",
+          "capturedAt": "2026-05-14T12:56:39.481Z",
+          "note": "imported from compete-matrix.json"
+        }
+      ]
+    },
+    {
+      "id": "competitor.instructor",
+      "name": "instructor",
+      "category": "oss",
+      "inspectionMode": "source_available",
+      "confidence": 0.9,
+      "provenance": [
+        {
+          "type": "manual_note",
+          "capturedAt": "2026-05-14T12:56:39.481Z",
+          "note": "imported from compete-matrix.json"
+        }
+      ]
+    },
+    {
+      "id": "competitor.aider",
+      "name": "aider",
+      "category": "oss",
+      "inspectionMode": "source_available",
+      "confidence": 0.9,
+      "provenance": [
+        {
+          "type": "manual_note",
+          "capturedAt": "2026-05-14T12:56:39.481Z",
+          "note": "imported from compete-matrix.json"
+        }
+      ]
+    },
+    {
+      "id": "competitor.ms-recall",
+      "name": "ms_recall",
+      "category": "closed_source",
+      "inspectionMode": "observational",
+      "confidence": 0.7,
+      "provenance": [
+        {
+          "type": "manual_note",
+          "capturedAt": "2026-05-14T12:56:39.481Z",
+          "note": "imported from compete-matrix.json"
+        }
+      ]
+    },
+    {
+      "id": "competitor.rewind-ai",
+      "name": "rewind_ai",
+      "category": "closed_source",
+      "inspectionMode": "observational",
+      "confidence": 0.7,
+      "provenance": [
+        {
+          "type": "manual_note",
+          "capturedAt": "2026-05-14T12:56:39.481Z",
+          "note": "imported from compete-matrix.json"
+        }
+      ]
+    },
+    {
+      "id": "competitor.notion-ai",
+      "name": "notion_ai",
+      "category": "closed_source",
+      "inspectionMode": "observational",
+      "confidence": 0.7,
+      "provenance": [
+        {
+          "type": "manual_note",
+          "capturedAt": "2026-05-14T12:56:39.481Z",
+          "note": "imported from compete-matrix.json"
+        }
+      ]
+    },
+    {
+      "id": "competitor.cursor",
+      "name": "cursor",
+      "category": "closed_source",
+      "inspectionMode": "observational",
+      "confidence": 0.7,
+      "provenance": [
+        {
+          "type": "manual_note",
+          "capturedAt": "2026-05-14T12:56:39.481Z",
+          "note": "imported from compete-matrix.json"
+        }
+      ]
+    },
+    {
+      "id": "competitor.mem-ai",
+      "name": "mem_ai",
+      "category": "closed_source",
+      "inspectionMode": "observational",
+      "confidence": 0.7,
+      "provenance": [
+        {
+          "type": "manual_note",
+          "capturedAt": "2026-05-14T12:56:39.481Z",
+          "note": "imported from compete-matrix.json"
+        }
+      ]
+    }
+  ]
+}

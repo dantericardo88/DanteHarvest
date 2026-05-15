@@ -1,0 +1,329 @@
+{
+  "generatedAt": "2026-05-14T15:42:20.950Z",
+  "leases": [
+    {
+      "id": "lease.vector_search_integration.2026-05-14T13-03-43.embedded.2026-05-14T13-04-36",
+      "workPacketId": "work.vector_search_integration.2026-05-14T13-03-43",
+      "provider": "embedded",
+      "agentRole": "dimension-engineer",
+      "branch": "matrix/vector_search_integration/embedded-13-04-36",
+      "worktreePath": "C:\\Projects\\DanteHarvest\\.danteforge-worktrees\\lease.vector_search_integration.2026-05-14T13-03-43.embedded.2026-05-14T13-04-36",
+      "allowedWritePaths": [],
+      "allowedReadPaths": [
+        "src/**",
+        "tests/**",
+        "docs/**"
+      ],
+      "forbiddenPaths": [],
+      "requiredCommands": [
+        "npm run typecheck",
+        "npm test"
+      ],
+      "budget": {
+        "maxTokens": 200000,
+        "maxRuntimeMinutes": 90,
+        "maxIterations": 3
+      },
+      "status": "completed",
+      "issuedAt": "2026-05-14T13:04:36.878Z",
+      "completedAt": "2026-05-14T14:05:24.833Z"
+    },
+    {
+      "id": "lease.replay_harness_fidelity.2026-05-14T13-03-43.embedded.2026-05-14T13-04-37",
+      "workPacketId": "work.replay_harness_fidelity.2026-05-14T13-03-43",
+      "provider": "embedded",
+      "agentRole": "dimension-engineer",
+      "branch": "matrix/replay_harness_fidelity/embedded-13-04-37",
+      "worktreePath": "C:\\Projects\\DanteHarvest\\.danteforge-worktrees\\lease.replay_harness_fidelity.2026-05-14T13-03-43.embedded.2026-05-14T13-04-37",
+      "allowedWritePaths": [],
+      "allowedReadPaths": [
+        "src/**",
+        "tests/**",
+        "docs/**"
+      ],
+      "forbiddenPaths": [],
+      "requiredCommands": [
+        "npm run typecheck",
+        "npm test"
+      ],
+      "budget": {
+        "maxTokens": 200000,
+        "maxRuntimeMinutes": 90,
+        "maxIterations": 3
+      },
+      "status": "completed",
+      "issuedAt": "2026-05-14T13:04:37.138Z",
+      "completedAt": "2026-05-14T14:05:29.986Z"
+    },
+    {
+      "id": "lease.redaction_accuracy.2026-05-14T13-03-43.embedded.2026-05-14T13-04-37",
+      "workPacketId": "work.redaction_accuracy.2026-05-14T13-03-43",
+      "provider": "embedded",
+      "agentRole": "dimension-engineer",
+      "branch": "matrix/redaction_accuracy/embedded-13-04-37",
+      "worktreePath": "C:\\Projects\\DanteHarvest\\.danteforge-worktrees\\lease.redaction_accuracy.2026-05-14T13-03-43.embedded.2026-05-14T13-04-37",
+      "allowedWritePaths": [],
+      "allowedReadPaths": [
+        "src/**",
+        "tests/**",
+        "docs/**"
+      ],
+      "forbiddenPaths": [],
+      "requiredCommands": [
+        "npm run typecheck",
+        "npm test"
+      ],
+      "budget": {
+        "maxTokens": 200000,
+        "maxRuntimeMinutes": 90,
+        "maxIterations": 3
+      },
+      "status": "completed",
+      "issuedAt": "2026-05-14T13:04:37.325Z",
+      "completedAt": "2026-05-14T14:05:44.182Z"
+    },
+    {
+      "id": "lease.cli_completeness.2026-05-14T13-03-43.embedded.2026-05-14T13-04-37",
+      "workPacketId": "work.cli_completeness.2026-05-14T13-03-43",
+      "provider": "embedded",
+      "agentRole": "dimension-engineer",
+      "branch": "matrix/cli_completeness/embedded-13-04-37",
+      "worktreePath": "C:\\Projects\\DanteHarvest\\.danteforge-worktrees\\lease.cli_completeness.2026-05-14T13-03-43.embedded.2026-05-14T13-04-37",
+      "allowedWritePaths": [],
+      "allowedReadPaths": [
+        "src/**",
+        "tests/**",
+        "docs/**"
+      ],
+      "forbiddenPaths": [],
+      "requiredCommands": [
+        "npm run typecheck",
+        "npm test"
+      ],
+      "budget": {
+        "maxTokens": 200000,
+        "maxRuntimeMinutes": 90,
+        "maxIterations": 3
+      },
+      "status": "completed",
+      "issuedAt": "2026-05-14T13:04:37.583Z",
+      "completedAt": "2026-05-14T14:06:33.293Z"
+    },
+    {
+      "id": "lease.redaction_accuracy.2026-05-14T14-39-11.embedded.2026-05-14T14-39-11",
+      "workPacketId": "work.redaction_accuracy.2026-05-14T14-39-11",
+      "provider": "embedded",
+      "agentRole": "dimension-engineer",
+      "branch": "matrix/redaction_accuracy/embedded-14-39-11",
+      "worktreePath": "C:\\Projects\\DanteHarvest\\.danteforge-worktrees\\lease.redaction_accuracy.2026-05-14T14-39-11.embedded.2026-05-14T14-39-11",
+      "allowedWritePaths": [],
+      "allowedReadPaths": [
+        "src/**",
+        "tests/**",
+        "docs/**"
+      ],
+      "forbiddenPaths": [],
+      "requiredCommands": [
+        "npm run typecheck",
+        "npm test"
+      ],
+      "budget": {
+        "maxTokens": 200000,
+        "maxRuntimeMinutes": 90,
+        "maxIterations": 3
+      },
+      "status": "completed",
+      "issuedAt": "2026-05-14T14:39:11.567Z",
+      "completedAt": "2026-05-14T15:02:46.548Z"
+    },
+    {
+      "id": "lease.cli_completeness.2026-05-14T14-39-11.embedded.2026-05-14T14-39-12",
+      "workPacketId": "work.cli_completeness.2026-05-14T14-39-11",
+      "provider": "embedded",
+      "agentRole": "dimension-engineer",
+      "branch": "matrix/cli_completeness/embedded-14-39-12",
+      "worktreePath": "C:\\Projects\\DanteHarvest\\.danteforge-worktrees\\lease.cli_completeness.2026-05-14T14-39-11.embedded.2026-05-14T14-39-12",
+      "allowedWritePaths": [],
+      "allowedReadPaths": [
+        "src/**",
+        "tests/**",
+        "docs/**"
+      ],
+      "forbiddenPaths": [],
+      "requiredCommands": [
+        "npm run typecheck",
+        "npm test"
+      ],
+      "budget": {
+        "maxTokens": 200000,
+        "maxRuntimeMinutes": 90,
+        "maxIterations": 3
+      },
+      "status": "completed",
+      "issuedAt": "2026-05-14T14:39:12.054Z",
+      "completedAt": "2026-05-14T15:02:47.510Z"
+    },
+    {
+      "id": "lease.observation_plane_depth.2026-05-14T14-39-11.embedded.2026-05-14T14-39-12",
+      "workPacketId": "work.observation_plane_depth.2026-05-14T14-39-11",
+      "provider": "embedded",
+      "agentRole": "dimension-engineer",
+      "branch": "matrix/observation_plane_depth/embedded-14-39-12",
+      "worktreePath": "C:\\Projects\\DanteHarvest\\.danteforge-worktrees\\lease.observation_plane_depth.2026-05-14T14-39-11.embedded.2026-05-14T14-39-12",
+      "allowedWritePaths": [],
+      "allowedReadPaths": [
+        "src/**",
+        "tests/**",
+        "docs/**"
+      ],
+      "forbiddenPaths": [],
+      "requiredCommands": [
+        "npm run typecheck",
+        "npm test"
+      ],
+      "budget": {
+        "maxTokens": 200000,
+        "maxRuntimeMinutes": 90,
+        "maxIterations": 3
+      },
+      "status": "completed",
+      "issuedAt": "2026-05-14T14:39:12.407Z",
+      "completedAt": "2026-05-14T15:02:48.671Z"
+    },
+    {
+      "id": "lease.taxonomy_builder.2026-05-14T14-39-11.embedded.2026-05-14T14-39-13",
+      "workPacketId": "work.taxonomy_builder.2026-05-14T14-39-11",
+      "provider": "embedded",
+      "agentRole": "dimension-engineer",
+      "branch": "matrix/taxonomy_builder/embedded-14-39-13",
+      "worktreePath": "C:\\Projects\\DanteHarvest\\.danteforge-worktrees\\lease.taxonomy_builder.2026-05-14T14-39-11.embedded.2026-05-14T14-39-13",
+      "allowedWritePaths": [],
+      "allowedReadPaths": [
+        "src/**",
+        "tests/**",
+        "docs/**"
+      ],
+      "forbiddenPaths": [],
+      "requiredCommands": [
+        "npm run typecheck",
+        "npm test"
+      ],
+      "budget": {
+        "maxTokens": 200000,
+        "maxRuntimeMinutes": 90,
+        "maxIterations": 3
+      },
+      "status": "completed",
+      "issuedAt": "2026-05-14T14:39:13.020Z",
+      "completedAt": "2026-05-14T15:02:49.813Z"
+    },
+    {
+      "id": "lease.crawl_acquisition.2026-05-14T14-39-11.embedded.2026-05-14T15-03-42",
+      "workPacketId": "work.crawl_acquisition.2026-05-14T14-39-11",
+      "provider": "embedded",
+      "agentRole": "dimension-engineer",
+      "branch": "matrix/crawl_acquisition/embedded-15-03-42",
+      "worktreePath": "C:\\Projects\\DanteHarvest\\.danteforge-worktrees\\lease.crawl_acquisition.2026-05-14T14-39-11.embedded.2026-05-14T15-03-42",
+      "allowedWritePaths": [],
+      "allowedReadPaths": [
+        "src/**",
+        "tests/**",
+        "docs/**"
+      ],
+      "forbiddenPaths": [],
+      "requiredCommands": [
+        "npm run typecheck",
+        "npm test"
+      ],
+      "budget": {
+        "maxTokens": 200000,
+        "maxRuntimeMinutes": 90,
+        "maxIterations": 3
+      },
+      "status": "completed",
+      "issuedAt": "2026-05-14T15:03:42.213Z",
+      "completedAt": "2026-05-14T15:35:57.047Z"
+    },
+    {
+      "id": "lease.transcription_quality.2026-05-14T14-39-11.embedded.2026-05-14T15-03-43",
+      "workPacketId": "work.transcription_quality.2026-05-14T14-39-11",
+      "provider": "embedded",
+      "agentRole": "dimension-engineer",
+      "branch": "matrix/transcription_quality/embedded-15-03-43",
+      "worktreePath": "C:\\Projects\\DanteHarvest\\.danteforge-worktrees\\lease.transcription_quality.2026-05-14T14-39-11.embedded.2026-05-14T15-03-43",
+      "allowedWritePaths": [],
+      "allowedReadPaths": [
+        "src/**",
+        "tests/**",
+        "docs/**"
+      ],
+      "forbiddenPaths": [],
+      "requiredCommands": [
+        "npm run typecheck",
+        "npm test"
+      ],
+      "budget": {
+        "maxTokens": 200000,
+        "maxRuntimeMinutes": 90,
+        "maxIterations": 3
+      },
+      "status": "completed",
+      "issuedAt": "2026-05-14T15:03:43.690Z",
+      "completedAt": "2026-05-14T15:36:07.205Z"
+    },
+    {
+      "id": "lease.dante_agents_integration.2026-05-14T14-39-11.embedded.2026-05-14T15-03-44",
+      "workPacketId": "work.dante_agents_integration.2026-05-14T14-39-11",
+      "provider": "embedded",
+      "agentRole": "dimension-engineer",
+      "branch": "matrix/dante_agents_integration/embedded-15-03-44",
+      "worktreePath": "C:\\Projects\\DanteHarvest\\.danteforge-worktrees\\lease.dante_agents_integration.2026-05-14T14-39-11.embedded.2026-05-14T15-03-44",
+      "allowedWritePaths": [],
+      "allowedReadPaths": [
+        "src/**",
+        "tests/**",
+        "docs/**"
+      ],
+      "forbiddenPaths": [],
+      "requiredCommands": [
+        "npm run typecheck",
+        "npm test"
+      ],
+      "budget": {
+        "maxTokens": 200000,
+        "maxRuntimeMinutes": 90,
+        "maxIterations": 3
+      },
+      "status": "completed",
+      "issuedAt": "2026-05-14T15:03:44.498Z",
+      "completedAt": "2026-05-14T15:36:17.764Z"
+    },
+    {
+      "id": "lease.multi_format_ingest.2026-05-14T14-39-11.embedded.2026-05-14T15-03-45",
+      "workPacketId": "work.multi_format_ingest.2026-05-14T14-39-11",
+      "provider": "embedded",
+      "agentRole": "dimension-engineer",
+      "branch": "matrix/multi_format_ingest/embedded-15-03-45",
+      "worktreePath": "C:\\Projects\\DanteHarvest\\.danteforge-worktrees\\lease.multi_format_ingest.2026-05-14T14-39-11.embedded.2026-05-14T15-03-45",
+      "allowedWritePaths": [],
+      "allowedReadPaths": [
+        "src/**",
+        "tests/**",
+        "docs/**"
+      ],
+      "forbiddenPaths": [],
+      "requiredCommands": [
+        "npm run typecheck",
+        "npm test"
+      ],
+      "budget": {
+        "maxTokens": 200000,
+        "maxRuntimeMinutes": 90,
+        "maxIterations": 3
+      },
+      "status": "completed",
+      "issuedAt": "2026-05-14T15:03:45.390Z",
+      "completedAt": "2026-05-14T15:36:24.793Z"
+    }
+  ]
+}

@@ -1,0 +1,381 @@
+{
+  "generatedAt": "2026-05-14T15:42:24.184Z",
+  "messages": [
+    {
+      "messageId": "msg.lease.cli_completeness.2026-05-14T13-03-43.embedded.2026-05-14T13-04-37.2026-05-14T13-04-37.2178",
+      "type": "human_decision_required",
+      "fromLease": "lease.cli_completeness.2026-05-14T13-03-43.embedded.2026-05-14T13-04-37",
+      "toLease": "broadcast",
+      "summary": "Lease lease.cli_completeness.2026-05-14T13-03-43.embedded.2026-05-14T13-04-37 finished wave 1 as awaiting_input (0 file change(s)).",
+      "impact": "informational",
+      "requiresAck": false,
+      "status": "pending_ack",
+      "createdAt": "2026-05-14T13:04:37.819Z",
+      "metadata": {
+        "provider": "embedded",
+        "waveNumber": "1",
+        "filesChanged": []
+      }
+    },
+    {
+      "messageId": "msg.lease.cli_completeness.2026-05-14T13-03-43.embedded.2026-05-14T13-04-37.2026-05-14T14-06-33.2459",
+      "type": "merge_ready",
+      "fromLease": "lease.cli_completeness.2026-05-14T13-03-43.embedded.2026-05-14T13-04-37",
+      "toLease": "broadcast",
+      "summary": "Embedded host completed lease lease.cli_completeness.2026-05-14T13-03-43.embedded.2026-05-14T13-04-37 with 1 file change(s). Verify-court can review.",
+      "impact": "consumer_update_required",
+      "requiresAck": false,
+      "status": "pending_ack",
+      "createdAt": "2026-05-14T14:06:33.316Z",
+      "metadata": {
+        "workPacketId": "work.cli_completeness.2026-05-14T13-03-43",
+        "filesChanged": [
+          "harvest_ui\\cli.py"
+        ]
+      }
+    },
+    {
+      "messageId": "msg.lease.cli_completeness.2026-05-14T14-39-11.embedded.2026-05-14T14-39-12.2026-05-14T14-39-14.2936",
+      "type": "human_decision_required",
+      "fromLease": "lease.cli_completeness.2026-05-14T14-39-11.embedded.2026-05-14T14-39-12",
+      "toLease": "broadcast",
+      "summary": "Lease lease.cli_completeness.2026-05-14T14-39-11.embedded.2026-05-14T14-39-12 finished wave 1 as awaiting_input (0 file change(s)).",
+      "impact": "informational",
+      "requiresAck": false,
+      "status": "pending_ack",
+      "createdAt": "2026-05-14T14:39:14.262Z",
+      "metadata": {
+        "provider": "embedded",
+        "waveNumber": "1",
+        "filesChanged": []
+      }
+    },
+    {
+      "messageId": "msg.lease.cli_completeness.2026-05-14T14-39-11.embedded.2026-05-14T14-39-12.2026-05-14T15-02-47.5315",
+      "type": "merge_ready",
+      "fromLease": "lease.cli_completeness.2026-05-14T14-39-11.embedded.2026-05-14T14-39-12",
+      "toLease": "broadcast",
+      "summary": "Embedded host completed lease lease.cli_completeness.2026-05-14T14-39-11.embedded.2026-05-14T14-39-12 with 0 file change(s). Verify-court can review.",
+      "impact": "informational",
+      "requiresAck": false,
+      "status": "pending_ack",
+      "createdAt": "2026-05-14T15:02:47.553Z",
+      "metadata": {
+        "workPacketId": "work.cli_completeness.2026-05-14T14-39-11",
+        "filesChanged": []
+      }
+    },
+    {
+      "messageId": "msg.lease.crawl_acquisition.2026-05-14T14-39-11.embedded.2026-05-14T15-03-42.2026-05-14T15-03-46.8342",
+      "type": "human_decision_required",
+      "fromLease": "lease.crawl_acquisition.2026-05-14T14-39-11.embedded.2026-05-14T15-03-42",
+      "toLease": "broadcast",
+      "summary": "Lease lease.crawl_acquisition.2026-05-14T14-39-11.embedded.2026-05-14T15-03-42 finished wave 2 as awaiting_input (0 file change(s)).",
+      "impact": "informational",
+      "requiresAck": false,
+      "status": "pending_ack",
+      "createdAt": "2026-05-14T15:03:46.324Z",
+      "metadata": {
+        "provider": "embedded",
+        "waveNumber": "2",
+        "filesChanged": []
+      }
+    },
+    {
+      "messageId": "msg.lease.crawl_acquisition.2026-05-14T14-39-11.embedded.2026-05-14T15-03-42.2026-05-14T15-35-57.7453",
+      "type": "merge_ready",
+      "fromLease": "lease.crawl_acquisition.2026-05-14T14-39-11.embedded.2026-05-14T15-03-42",
+      "toLease": "broadcast",
+      "summary": "Embedded host completed lease lease.crawl_acquisition.2026-05-14T14-39-11.embedded.2026-05-14T15-03-42 with 0 file change(s). Verify-court can review.",
+      "impact": "informational",
+      "requiresAck": false,
+      "status": "pending_ack",
+      "createdAt": "2026-05-14T15:35:57.086Z",
+      "metadata": {
+        "workPacketId": "work.crawl_acquisition.2026-05-14T14-39-11",
+        "filesChanged": []
+      }
+    },
+    {
+      "messageId": "msg.lease.dante_agents_integration.2026-05-14T14-39-11.embedded.2026-05-14T15-03-44.2026-05-14T15-03-46.6209",
+      "type": "human_decision_required",
+      "fromLease": "lease.dante_agents_integration.2026-05-14T14-39-11.embedded.2026-05-14T15-03-44",
+      "toLease": "broadcast",
+      "summary": "Lease lease.dante_agents_integration.2026-05-14T14-39-11.embedded.2026-05-14T15-03-44 finished wave 2 as awaiting_input (0 file change(s)).",
+      "impact": "informational",
+      "requiresAck": false,
+      "status": "pending_ack",
+      "createdAt": "2026-05-14T15:03:46.330Z",
+      "metadata": {
+        "provider": "embedded",
+        "waveNumber": "2",
+        "filesChanged": []
+      }
+    },
+    {
+      "messageId": "msg.lease.dante_agents_integration.2026-05-14T14-39-11.embedded.2026-05-14T15-03-44.2026-05-14T15-36-17.1019",
+      "type": "merge_ready",
+      "fromLease": "lease.dante_agents_integration.2026-05-14T14-39-11.embedded.2026-05-14T15-03-44",
+      "toLease": "broadcast",
+      "summary": "Embedded host completed lease lease.dante_agents_integration.2026-05-14T14-39-11.embedded.2026-05-14T15-03-44 with 0 file change(s). Verify-court can review.",
+      "impact": "informational",
+      "requiresAck": false,
+      "status": "pending_ack",
+      "createdAt": "2026-05-14T15:36:17.789Z",
+      "metadata": {
+        "workPacketId": "work.dante_agents_integration.2026-05-14T14-39-11",
+        "filesChanged": []
+      }
+    },
+    {
+      "messageId": "msg.lease.multi_format_ingest.2026-05-14T14-39-11.embedded.2026-05-14T15-03-45.2026-05-14T15-03-46.2110",
+      "type": "human_decision_required",
+      "fromLease": "lease.multi_format_ingest.2026-05-14T14-39-11.embedded.2026-05-14T15-03-45",
+      "toLease": "broadcast",
+      "summary": "Lease lease.multi_format_ingest.2026-05-14T14-39-11.embedded.2026-05-14T15-03-45 finished wave 2 as awaiting_input (0 file change(s)).",
+      "impact": "informational",
+      "requiresAck": false,
+      "status": "pending_ack",
+      "createdAt": "2026-05-14T15:03:46.333Z",
+      "metadata": {
+        "provider": "embedded",
+        "waveNumber": "2",
+        "filesChanged": []
+      }
+    },
+    {
+      "messageId": "msg.lease.multi_format_ingest.2026-05-14T14-39-11.embedded.2026-05-14T15-03-45.2026-05-14T15-36-24.9433",
+      "type": "merge_ready",
+      "fromLease": "lease.multi_format_ingest.2026-05-14T14-39-11.embedded.2026-05-14T15-03-45",
+      "toLease": "broadcast",
+      "summary": "Embedded host completed lease lease.multi_format_ingest.2026-05-14T14-39-11.embedded.2026-05-14T15-03-45 with 0 file change(s). Verify-court can review.",
+      "impact": "informational",
+      "requiresAck": false,
+      "status": "pending_ack",
+      "createdAt": "2026-05-14T15:36:24.817Z",
+      "metadata": {
+        "workPacketId": "work.multi_format_ingest.2026-05-14T14-39-11",
+        "filesChanged": []
+      }
+    },
+    {
+      "messageId": "msg.lease.observation_plane_depth.2026-05-14T14-39-11.embedded.2026-05-14T14-39-12.2026-05-14T14-39-14.1673",
+      "type": "human_decision_required",
+      "fromLease": "lease.observation_plane_depth.2026-05-14T14-39-11.embedded.2026-05-14T14-39-12",
+      "toLease": "broadcast",
+      "summary": "Lease lease.observation_plane_depth.2026-05-14T14-39-11.embedded.2026-05-14T14-39-12 finished wave 1 as awaiting_input (0 file change(s)).",
+      "impact": "informational",
+      "requiresAck": false,
+      "status": "pending_ack",
+      "createdAt": "2026-05-14T14:39:14.265Z",
+      "metadata": {
+        "provider": "embedded",
+        "waveNumber": "1",
+        "filesChanged": []
+      }
+    },
+    {
+      "messageId": "msg.lease.observation_plane_depth.2026-05-14T14-39-11.embedded.2026-05-14T14-39-12.2026-05-14T15-02-48.1184",
+      "type": "merge_ready",
+      "fromLease": "lease.observation_plane_depth.2026-05-14T14-39-11.embedded.2026-05-14T14-39-12",
+      "toLease": "broadcast",
+      "summary": "Embedded host completed lease lease.observation_plane_depth.2026-05-14T14-39-11.embedded.2026-05-14T14-39-12 with 0 file change(s). Verify-court can review.",
+      "impact": "informational",
+      "requiresAck": false,
+      "status": "pending_ack",
+      "createdAt": "2026-05-14T15:02:48.685Z",
+      "metadata": {
+        "workPacketId": "work.observation_plane_depth.2026-05-14T14-39-11",
+        "filesChanged": []
+      }
+    },
+    {
+      "messageId": "msg.lease.redaction_accuracy.2026-05-14T13-03-43.embedded.2026-05-14T13-04-37.2026-05-14T13-04-37.714",
+      "type": "human_decision_required",
+      "fromLease": "lease.redaction_accuracy.2026-05-14T13-03-43.embedded.2026-05-14T13-04-37",
+      "toLease": "broadcast",
+      "summary": "Lease lease.redaction_accuracy.2026-05-14T13-03-43.embedded.2026-05-14T13-04-37 finished wave 1 as awaiting_input (0 file change(s)).",
+      "impact": "informational",
+      "requiresAck": false,
+      "status": "pending_ack",
+      "createdAt": "2026-05-14T13:04:37.818Z",
+      "metadata": {
+        "provider": "embedded",
+        "waveNumber": "1",
+        "filesChanged": []
+      }
+    },
+    {
+      "messageId": "msg.lease.redaction_accuracy.2026-05-14T13-03-43.embedded.2026-05-14T13-04-37.2026-05-14T14-05-44.9579",
+      "type": "merge_ready",
+      "fromLease": "lease.redaction_accuracy.2026-05-14T13-03-43.embedded.2026-05-14T13-04-37",
+      "toLease": "broadcast",
+      "summary": "Embedded host completed lease lease.redaction_accuracy.2026-05-14T13-03-43.embedded.2026-05-14T13-04-37 with 0 file change(s). Verify-court can review.",
+      "impact": "informational",
+      "requiresAck": false,
+      "status": "pending_ack",
+      "createdAt": "2026-05-14T14:05:44.207Z",
+      "metadata": {
+        "workPacketId": "work.redaction_accuracy.2026-05-14T13-03-43",
+        "filesChanged": []
+      }
+    },
+    {
+      "messageId": "msg.lease.redaction_accuracy.2026-05-14T14-39-11.embedded.2026-05-14T14-39-11.2026-05-14T14-39-14.653",
+      "type": "human_decision_required",
+      "fromLease": "lease.redaction_accuracy.2026-05-14T14-39-11.embedded.2026-05-14T14-39-11",
+      "toLease": "broadcast",
+      "summary": "Lease lease.redaction_accuracy.2026-05-14T14-39-11.embedded.2026-05-14T14-39-11 finished wave 1 as awaiting_input (0 file change(s)).",
+      "impact": "informational",
+      "requiresAck": false,
+      "status": "pending_ack",
+      "createdAt": "2026-05-14T14:39:14.260Z",
+      "metadata": {
+        "provider": "embedded",
+        "waveNumber": "1",
+        "filesChanged": []
+      }
+    },
+    {
+      "messageId": "msg.lease.redaction_accuracy.2026-05-14T14-39-11.embedded.2026-05-14T14-39-11.2026-05-14T15-02-46.37",
+      "type": "merge_ready",
+      "fromLease": "lease.redaction_accuracy.2026-05-14T14-39-11.embedded.2026-05-14T14-39-11",
+      "toLease": "broadcast",
+      "summary": "Embedded host completed lease lease.redaction_accuracy.2026-05-14T14-39-11.embedded.2026-05-14T14-39-11 with 0 file change(s). Verify-court can review.",
+      "impact": "informational",
+      "requiresAck": false,
+      "status": "pending_ack",
+      "createdAt": "2026-05-14T15:02:46.562Z",
+      "metadata": {
+        "workPacketId": "work.redaction_accuracy.2026-05-14T14-39-11",
+        "filesChanged": []
+      }
+    },
+    {
+      "messageId": "msg.lease.replay_harness_fidelity.2026-05-14T13-03-43.embedded.2026-05-14T13-04-37.2026-05-14T13-04-37.607",
+      "type": "human_decision_required",
+      "fromLease": "lease.replay_harness_fidelity.2026-05-14T13-03-43.embedded.2026-05-14T13-04-37",
+      "toLease": "broadcast",
+      "summary": "Lease lease.replay_harness_fidelity.2026-05-14T13-03-43.embedded.2026-05-14T13-04-37 finished wave 1 as awaiting_input (0 file change(s)).",
+      "impact": "informational",
+      "requiresAck": false,
+      "status": "pending_ack",
+      "createdAt": "2026-05-14T13:04:37.817Z",
+      "metadata": {
+        "provider": "embedded",
+        "waveNumber": "1",
+        "filesChanged": []
+      }
+    },
+    {
+      "messageId": "msg.lease.replay_harness_fidelity.2026-05-14T13-03-43.embedded.2026-05-14T13-04-37.2026-05-14T14-05-30.4031",
+      "type": "merge_ready",
+      "fromLease": "lease.replay_harness_fidelity.2026-05-14T13-03-43.embedded.2026-05-14T13-04-37",
+      "toLease": "broadcast",
+      "summary": "Embedded host completed lease lease.replay_harness_fidelity.2026-05-14T13-03-43.embedded.2026-05-14T13-04-37 with 0 file change(s). Verify-court can review.",
+      "impact": "informational",
+      "requiresAck": false,
+      "status": "pending_ack",
+      "createdAt": "2026-05-14T14:05:30.010Z",
+      "metadata": {
+        "workPacketId": "work.replay_harness_fidelity.2026-05-14T13-03-43",
+        "filesChanged": []
+      }
+    },
+    {
+      "messageId": "msg.lease.taxonomy_builder.2026-05-14T14-39-11.embedded.2026-05-14T14-39-13.2026-05-14T14-39-14.3937",
+      "type": "human_decision_required",
+      "fromLease": "lease.taxonomy_builder.2026-05-14T14-39-11.embedded.2026-05-14T14-39-13",
+      "toLease": "broadcast",
+      "summary": "Lease lease.taxonomy_builder.2026-05-14T14-39-11.embedded.2026-05-14T14-39-13 finished wave 1 as awaiting_input (0 file change(s)).",
+      "impact": "informational",
+      "requiresAck": false,
+      "status": "pending_ack",
+      "createdAt": "2026-05-14T14:39:14.267Z",
+      "metadata": {
+        "provider": "embedded",
+        "waveNumber": "1",
+        "filesChanged": []
+      }
+    },
+    {
+      "messageId": "msg.lease.taxonomy_builder.2026-05-14T14-39-11.embedded.2026-05-14T14-39-13.2026-05-14T15-02-49.6085",
+      "type": "merge_ready",
+      "fromLease": "lease.taxonomy_builder.2026-05-14T14-39-11.embedded.2026-05-14T14-39-13",
+      "toLease": "broadcast",
+      "summary": "Embedded host completed lease lease.taxonomy_builder.2026-05-14T14-39-11.embedded.2026-05-14T14-39-13 with 0 file change(s). Verify-court can review.",
+      "impact": "informational",
+      "requiresAck": false,
+      "status": "pending_ack",
+      "createdAt": "2026-05-14T15:02:49.826Z",
+      "metadata": {
+        "workPacketId": "work.taxonomy_builder.2026-05-14T14-39-11",
+        "filesChanged": []
+      }
+    },
+    {
+      "messageId": "msg.lease.transcription_quality.2026-05-14T14-39-11.embedded.2026-05-14T15-03-43.2026-05-14T15-03-46.2566",
+      "type": "human_decision_required",
+      "fromLease": "lease.transcription_quality.2026-05-14T14-39-11.embedded.2026-05-14T15-03-43",
+      "toLease": "broadcast",
+      "summary": "Lease lease.transcription_quality.2026-05-14T14-39-11.embedded.2026-05-14T15-03-43 finished wave 2 as awaiting_input (0 file change(s)).",
+      "impact": "informational",
+      "requiresAck": false,
+      "status": "pending_ack",
+      "createdAt": "2026-05-14T15:03:46.327Z",
+      "metadata": {
+        "provider": "embedded",
+        "waveNumber": "2",
+        "filesChanged": []
+      }
+    },
+    {
+      "messageId": "msg.lease.transcription_quality.2026-05-14T14-39-11.embedded.2026-05-14T15-03-43.2026-05-14T15-36-07.984",
+      "type": "merge_ready",
+      "fromLease": "lease.transcription_quality.2026-05-14T14-39-11.embedded.2026-05-14T15-03-43",
+      "toLease": "broadcast",
+      "summary": "Embedded host completed lease lease.transcription_quality.2026-05-14T14-39-11.embedded.2026-05-14T15-03-43 with 0 file change(s). Verify-court can review.",
+      "impact": "informational",
+      "requiresAck": false,
+      "status": "pending_ack",
+      "createdAt": "2026-05-14T15:36:07.244Z",
+      "metadata": {
+        "workPacketId": "work.transcription_quality.2026-05-14T14-39-11",
+        "filesChanged": []
+      }
+    },
+    {
+      "messageId": "msg.lease.vector_search_integration.2026-05-14T13-03-43.embedded.2026-05-14T13-04-36.2026-05-14T13-04-37.6888",
+      "type": "human_decision_required",
+      "fromLease": "lease.vector_search_integration.2026-05-14T13-03-43.embedded.2026-05-14T13-04-36",
+      "toLease": "broadcast",
+      "summary": "Lease lease.vector_search_integration.2026-05-14T13-03-43.embedded.2026-05-14T13-04-36 finished wave 1 as awaiting_input (0 file change(s)).",
+      "impact": "informational",
+      "requiresAck": false,
+      "status": "pending_ack",
+      "createdAt": "2026-05-14T13:04:37.816Z",
+      "metadata": {
+        "provider": "embedded",
+        "waveNumber": "1",
+        "filesChanged": []
+      }
+    },
+    {
+      "messageId": "msg.lease.vector_search_integration.2026-05-14T13-03-43.embedded.2026-05-14T13-04-36.2026-05-14T14-05-24.3695",
+      "type": "merge_ready",
+      "fromLease": "lease.vector_search_integration.2026-05-14T13-03-43.embedded.2026-05-14T13-04-36",
+      "toLease": "broadcast",
+      "summary": "Embedded host completed lease lease.vector_search_integration.2026-05-14T13-03-43.embedded.2026-05-14T13-04-36 with 1 file change(s). Verify-court can review.",
+      "impact": "consumer_update_required",
+      "requiresAck": false,
+      "status": "pending_ack",
+      "createdAt": "2026-05-14T14:05:24.859Z",
+      "metadata": {
+        "workPacketId": "work.vector_search_integration.2026-05-14T13-03-43",
+        "filesChanged": [
+          "harvest_index\\search\\pack_vector_store.py"
+        ]
+      }
+    }
+  ]
+}

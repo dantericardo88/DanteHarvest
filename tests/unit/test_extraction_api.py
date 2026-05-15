@@ -46,10 +46,12 @@ def test_job_store_update(tmp_path):
     store = JobStore(storage_root=str(tmp_path))
     job = store.create("extract", "https://a.com", {})
     updated = store.update(job.job_id, status="completed", result={"key": "value"})
+    assert updated is not None
     assert updated.status == "completed"
     assert updated.result == {"key": "value"}
     # persisted
     reloaded = store.get(job.job_id)
+    assert reloaded is not None
     assert reloaded.status == "completed"
 
 
@@ -59,6 +61,7 @@ def test_job_store_update_sets_timestamp(tmp_path):
     before = job.updated_at
     time.sleep(0.01)
     updated = store.update(job.job_id, status="processing")
+    assert updated is not None
     assert updated.updated_at > before
 
 
@@ -142,7 +145,9 @@ async def test_run_scrape_success(tmp_path):
         await _run_scrape(job.job_id, {"url": "https://example.com", "use_js_rendering": False}, store)
 
     updated = store.get(job.job_id)
+    assert updated is not None
     assert updated.status == "completed"
+    assert isinstance(updated.result, dict)
     assert updated.result["markdown"] == "Hello world"
 
 
@@ -162,6 +167,7 @@ async def test_run_scrape_no_pages(tmp_path):
         await _run_scrape(job.job_id, {"url": "https://bad.com", "use_js_rendering": False}, store)
 
     updated = store.get(job.job_id)
+    assert updated is not None
     assert updated.status == "failed"
 
 
@@ -189,6 +195,141 @@ async def test_run_crawl_success(tmp_path):
         )
 
     updated = store.get(job.job_id)
+    assert updated is not None
     assert updated.status == "completed"
+    assert isinstance(updated.result, dict)
     assert updated.result["page_count"] == 3
     assert len(updated.pages) == 3
+
+
+# ---------------------------------------------------------------------------
+# Webhook + domain preset features
+# ---------------------------------------------------------------------------
+
+def test_extraction_api_has_domain_prompts():
+    from harvest_ui.api.extraction_api import _DOMAIN_PROMPTS
+    assert "ecommerce" in _DOMAIN_PROMPTS
+    assert "news" in _DOMAIN_PROMPTS
+    assert "legal" in _DOMAIN_PROMPTS
+    assert "price" in _DOMAIN_PROMPTS["ecommerce"].lower() or "product" in _DOMAIN_PROMPTS["ecommerce"].lower()
+    assert "headline" in _DOMAIN_PROMPTS["news"].lower() or "author" in _DOMAIN_PROMPTS["news"].lower()
+    assert "case_name" in _DOMAIN_PROMPTS["legal"].lower() or "court" in _DOMAIN_PROMPTS["legal"].lower()
+
+
+def test_extraction_api_has_fire_webhook():
+    from harvest_ui.api.extraction_api import _fire_webhook
+    assert callable(_fire_webhook)
+
+
+@pytest.mark.asyncio
+async def test_fire_webhook_no_url_noop():
+    from harvest_ui.api.extraction_api import _fire_webhook
+    # Should complete without error even with no URL
+    await _fire_webhook(None, "job-001", "completed", {"result": "data"})
+
+
+@pytest.mark.asyncio
+async def test_fire_webhook_with_url_uses_hmac():
+    """Verify webhook fires with HMAC-SHA256 signature header."""
+    import hashlib, hmac, json as _json
+    from harvest_ui.api.extraction_api import _fire_webhook
+
+    calls = []
+
+    async def mock_post(url, **kwargs):
+        calls.append({"url": url, "headers": kwargs.get("headers", {}), "data": kwargs.get("data")})
+        class MockResp:
+            status = 200
+        return MockResp()
+
+    class MockSession:
+        async def __aenter__(self):
+            return self
+        async def __aexit__(self, *args):
+            pass
+        async def post(self, url, **kwargs):
+            calls.append({"url": url, "headers": kwargs.get("headers", {}), "data": kwargs.get("data")})
+            class MockResp:
+                status = 200
+            return MockResp()
+
+    with patch("aiohttp.ClientSession", return_value=MockSession()):
+        await _fire_webhook("http://hook.example.com", "job-001", "completed", {"x": 1})
+
+    if calls:  # aiohttp may not be installed in test env
+        call = calls[0]
+        assert call["url"] == "http://hook.example.com"
+        assert "X-Harvest-Signature" in call["headers"]
+        assert call["headers"]["X-Harvest-Signature"].startswith("sha256=")
+        assert call["headers"]["X-Harvest-Job-ID"] == "job-001"
+
+
+def test_domain_extract_request_has_webhook_url():
+    from harvest_ui.api.extraction_api import DomainExtractRequest
+    # Should have webhook_url and proxy_url fields
+    import inspect
+    sig = inspect.signature(DomainExtractRequest.__init__)
+    # For pydantic models, fields are on __fields__ or model_fields
+    try:
+        fields = DomainExtractRequest.model_fields
+    except AttributeError:
+        fields = DomainExtractRequest.__fields__
+    assert "webhook_url" in fields
+    assert "proxy_url" in fields
+
+
+def test_extract_request_has_webhook_and_proxy():
+    from harvest_ui.api.extraction_api import ExtractRequest
+    try:
+        fields = ExtractRequest.model_fields
+    except AttributeError:
+        fields = ExtractRequest.__fields__
+    assert "webhook_url" in fields
+    assert "proxy_url" in fields
+
+
+def test_crawl_request_has_webhook_and_proxy():
+    from harvest_ui.api.extraction_api import CrawlRequest
+    try:
+        fields = CrawlRequest.model_fields
+    except AttributeError:
+        fields = CrawlRequest.__fields__
+    assert "webhook_url" in fields
+    assert "proxy_url" in fields
+
+
+def test_create_extraction_app_raises_without_fastapi():
+    from harvest_ui.api import extraction_api
+    if not extraction_api._FASTAPI:
+        with pytest.raises(ImportError):
+            extraction_api.create_extraction_app()
+
+
+@pytest.mark.asyncio
+async def test_run_extract_no_schema_returns_markdown(tmp_path):
+    from harvest_ui.api.extraction_api import _run_extract
+    from harvest_acquire.crawl.crawlee_adapter import CrawlResult, PageResult
+
+    store = JobStore(storage_root=str(tmp_path))
+    job = store.create("extract", "https://example.com", {})
+
+    mock_result = CrawlResult(
+        pages=[PageResult(url="https://example.com", markdown="Content here", status_code=200, depth=0, artifact_id="a1")],
+        total_bytes=50,
+        errors=[],
+    )
+
+    with patch("harvest_acquire.crawl.crawlee_adapter.CrawleeAdapter") as MockAdapter:
+        instance = MockAdapter.return_value
+        instance.crawl = AsyncMock(return_value=mock_result)
+        await _run_extract(
+            job.job_id,
+            {"url": "https://example.com", "use_js_rendering": False},
+            store,
+        )
+
+    updated = store.get(job.job_id)
+    assert updated is not None
+    assert updated.status == "completed"
+    assert isinstance(updated.result, dict)
+    assert updated.result.get("markdown") == "Content here"

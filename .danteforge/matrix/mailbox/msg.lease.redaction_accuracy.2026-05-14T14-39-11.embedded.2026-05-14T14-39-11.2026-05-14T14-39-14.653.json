@@ -1,0 +1,16 @@
+{
+  "messageId": "msg.lease.redaction_accuracy.2026-05-14T14-39-11.embedded.2026-05-14T14-39-11.2026-05-14T14-39-14.653",
+  "type": "human_decision_required",
+  "fromLease": "lease.redaction_accuracy.2026-05-14T14-39-11.embedded.2026-05-14T14-39-11",
+  "toLease": "broadcast",
+  "summary": "Lease lease.redaction_accuracy.2026-05-14T14-39-11.embedded.2026-05-14T14-39-11 finished wave 1 as awaiting_input (0 file change(s)).",
+  "impact": "informational",
+  "requiresAck": false,
+  "status": "pending_ack",
+  "createdAt": "2026-05-14T14:39:14.260Z",
+  "metadata": {
+    "provider": "embedded",
+    "waveNumber": "1",
+    "filesChanged": []
+  }
+}

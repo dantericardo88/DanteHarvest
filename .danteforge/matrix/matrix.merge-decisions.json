@@ -1,0 +1,85 @@
+{
+  "generatedAt": "2026-05-14T15:03:26.545Z",
+  "decisions": [
+    {
+      "id": "merge.cand.lease.vector_search_integration.2026-05-14T13-03-43.embedded.2026-05-14T13-04-36.2026-05-14T14-07-54",
+      "candidateId": "cand.lease.vector_search_integration.2026-05-14T13-03-43.embedded.2026-05-14T13-04-36",
+      "leaseId": "lease.vector_search_integration.2026-05-14T13-03-43.embedded.2026-05-14T13-04-36",
+      "branch": "matrix/vector_search_integration/embedded-13-04-36",
+      "decision": "REJECTED",
+      "reason": "Gate report status: failed",
+      "createdAt": "2026-05-14T14:07:54.410Z",
+      "decidedBy": "merge-court"
+    },
+    {
+      "id": "merge.cand.lease.replay_harness_fidelity.2026-05-14T13-03-43.embedded.2026-05-14T13-04-37.2026-05-14T14-07-54",
+      "candidateId": "cand.lease.replay_harness_fidelity.2026-05-14T13-03-43.embedded.2026-05-14T13-04-37",
+      "leaseId": "lease.replay_harness_fidelity.2026-05-14T13-03-43.embedded.2026-05-14T13-04-37",
+      "branch": "matrix/replay_harness_fidelity/embedded-13-04-37",
+      "decision": "REJECTED",
+      "reason": "No substantive diff — agent produced zero file changes for a packet that requested work.",
+      "createdAt": "2026-05-14T14:07:54.410Z",
+      "decidedBy": "merge-court"
+    },
+    {
+      "id": "merge.cand.lease.redaction_accuracy.2026-05-14T13-03-43.embedded.2026-05-14T13-04-37.2026-05-14T14-07-54",
+      "candidateId": "cand.lease.redaction_accuracy.2026-05-14T13-03-43.embedded.2026-05-14T13-04-37",
+      "leaseId": "lease.redaction_accuracy.2026-05-14T13-03-43.embedded.2026-05-14T13-04-37",
+      "branch": "matrix/redaction_accuracy/embedded-13-04-37",
+      "decision": "REJECTED",
+      "reason": "No substantive diff — agent produced zero file changes for a packet that requested work.",
+      "createdAt": "2026-05-14T14:07:54.410Z",
+      "decidedBy": "merge-court"
+    },
+    {
+      "id": "merge.cand.lease.cli_completeness.2026-05-14T13-03-43.embedded.2026-05-14T13-04-37.2026-05-14T14-07-54",
+      "candidateId": "cand.lease.cli_completeness.2026-05-14T13-03-43.embedded.2026-05-14T13-04-37",
+      "leaseId": "lease.cli_completeness.2026-05-14T13-03-43.embedded.2026-05-14T13-04-37",
+      "branch": "matrix/cli_completeness/embedded-13-04-37",
+      "decision": "REJECTED",
+      "reason": "Gate report status: failed",
+      "createdAt": "2026-05-14T14:07:54.410Z",
+      "decidedBy": "merge-court"
+    },
+    {
+      "id": "merge.cand.lease.redaction_accuracy.2026-05-14T14-39-11.embedded.2026-05-14T14-39-11.2026-05-14T15-03-26",
+      "candidateId": "cand.lease.redaction_accuracy.2026-05-14T14-39-11.embedded.2026-05-14T14-39-11",
+      "leaseId": "lease.redaction_accuracy.2026-05-14T14-39-11.embedded.2026-05-14T14-39-11",
+      "branch": "matrix/redaction_accuracy/embedded-14-39-11",
+      "decision": "REJECTED",
+      "reason": "No substantive diff — agent produced zero file changes for a packet that requested work.",
+      "createdAt": "2026-05-14T15:03:26.536Z",
+      "decidedBy": "merge-court"
+    },
+    {
+      "id": "merge.cand.lease.cli_completeness.2026-05-14T14-39-11.embedded.2026-05-14T14-39-12.2026-05-14T15-03-26",
+      "candidateId": "cand.lease.cli_completeness.2026-05-14T14-39-11.embedded.2026-05-14T14-39-12",
+      "leaseId": "lease.cli_completeness.2026-05-14T14-39-11.embedded.2026-05-14T14-39-12",
+      "branch": "matrix/cli_completeness/embedded-14-39-12",
+      "decision": "REJECTED",
+      "reason": "No substantive diff — agent produced zero file changes for a packet that requested work.",
+      "createdAt": "2026-05-14T15:03:26.536Z",
+      "decidedBy": "merge-court"
+    },
+    {
+      "id": "merge.cand.lease.observation_plane_depth.2026-05-14T14-39-11.embedded.2026-05-14T14-39-12.2026-05-14T15-03-26",
+      "candidateId": "cand.lease.observation_plane_depth.2026-05-14T14-39-11.embedded.2026-05-14T14-39-12",
+      "leaseId": "lease.observation_plane_depth.2026-05-14T14-39-11.embedded.2026-05-14T14-39-12",
+      "branch": "matrix/observation_plane_depth/embedded-14-39-12",
+      "decision": "REJECTED",
+      "reason": "No substantive diff — agent produced zero file changes for a packet that requested work.",
+      "createdAt": "2026-05-14T15:03:26.536Z",
+      "decidedBy": "merge-court"
+    },
+    {
+      "id": "merge.cand.lease.taxonomy_builder.2026-05-14T14-39-11.embedded.2026-05-14T14-39-13.2026-05-14T15-03-26",
+      "candidateId": "cand.lease.taxonomy_builder.2026-05-14T14-39-11.embedded.2026-05-14T14-39-13",
+      "leaseId": "lease.taxonomy_builder.2026-05-14T14-39-11.embedded.2026-05-14T14-39-13",
+      "branch": "matrix/taxonomy_builder/embedded-14-39-13",
+      "decision": "REJECTED",
+      "reason": "No substantive diff — agent produced zero file changes for a packet that requested work.",
+      "createdAt": "2026-05-14T15:03:26.536Z",
+      "decidedBy": "merge-court"
+    }
+  ]
+}

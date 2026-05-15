@@ -1,12 +1,18 @@
 """
 Structured Extraction API — Firecrawl-pattern async job endpoints.
 
-POST /api/v1/scrape          URL → markdown (sync, optional JS rendering)
-POST /api/v1/extract         URL + schema/prompt → JSON structured data (async)
-POST /api/v1/crawl           URL + depth → list of pages (async)
-GET  /api/v1/jobs/{job_id}   poll job status + result
-GET  /api/v1/jobs/{job_id}/pages  paginated crawl results
-GET  /api/v1/jobs            list recent jobs
+POST /api/v1/scrape                URL → markdown (sync, optional JS rendering)
+POST /api/v1/extract               URL + schema/prompt → JSON structured data (async)
+POST /api/v1/crawl                 URL + depth → list of pages (async)
+POST /api/v1/extract/ecommerce     Domain preset: price/SKU/availability extraction
+POST /api/v1/extract/news          Domain preset: headline/author/date extraction
+POST /api/v1/extract/legal         Domain preset: citation/party/judgment extraction
+GET  /api/v1/jobs/{job_id}         poll job status + result
+GET  /api/v1/jobs/{job_id}/pages   paginated crawl results
+GET  /api/v1/jobs                  list recent jobs
+
+webhook_url: all async endpoints accept optional webhook_url; on job completion
+the result is POSTed to that URL with HMAC-SHA256 signature (via WebhookDispatcher).
 
 Constitutional guarantees:
 - Local-first: file-backed job store, no Redis/Celery
@@ -45,6 +51,8 @@ class ExtractRequest(_BM):
     url: str
     schema_prompt: Optional[str] = None
     use_js_rendering: bool = False
+    webhook_url: Optional[str] = None
+    proxy_url: Optional[str] = None
 
 
 class CrawlRequest(_BM):
@@ -54,6 +62,15 @@ class CrawlRequest(_BM):
     follow_links: bool = True
     use_js_rendering: bool = False
     user_query: Optional[str] = None
+    webhook_url: Optional[str] = None
+    proxy_url: Optional[str] = None
+
+
+class DomainExtractRequest(_BM):
+    url: str
+    use_js_rendering: bool = False
+    webhook_url: Optional[str] = None
+    proxy_url: Optional[str] = None
 
 
 # ---------------------------------------------------------------------------
@@ -126,6 +143,52 @@ async def _llm_extract(markdown: str, schema_prompt: Optional[str]) -> Dict[str,
         return {"markdown": markdown, "extraction_error": str(e)}
 
 
+async def _fire_webhook(webhook_url: Optional[str], job_id: str, status: str, result: Any) -> None:
+    """POST job completion payload to webhook_url if provided (HMAC-SHA256 signed)."""
+    if not webhook_url:
+        return
+    try:
+        import hashlib, hmac, json as _json
+        payload_bytes = _json.dumps({"job_id": job_id, "status": status, "result": result}).encode()
+        sig = hmac.new(b"harvest-webhook", payload_bytes, hashlib.sha256).hexdigest()
+        try:
+            import aiohttp
+            async with aiohttp.ClientSession() as session:
+                await session.post(
+                    webhook_url,
+                    data=payload_bytes,
+                    headers={
+                        "Content-Type": "application/json",
+                        "X-Harvest-Signature": f"sha256={sig}",
+                        "X-Harvest-Job-ID": job_id,
+                    },
+                    timeout=aiohttp.ClientTimeout(total=10),
+                )
+        except ImportError:
+            pass  # aiohttp not installed — webhook silently skipped
+    except Exception:
+        pass  # webhook delivery failure never breaks the job
+
+
+# Domain-specific extraction prompts
+_DOMAIN_PROMPTS: Dict[str, str] = {
+    "ecommerce": (
+        "Extract: product_name, price (numeric), currency, sku, availability "
+        "(in_stock|out_of_stock|preorder), rating, review_count, images (list of URLs). "
+        "Return JSON."
+    ),
+    "news": (
+        "Extract: headline, author (list), published_date (ISO-8601), summary (2 sentences), "
+        "tags (list), canonical_url. Return JSON."
+    ),
+    "legal": (
+        "Extract: case_name, court, jurisdiction, decision_date (ISO-8601), "
+        "parties (plaintiff, defendant), citations (list), holding (1 sentence), "
+        "outcome (affirmed|reversed|remanded|dismissed|other). Return JSON."
+    ),
+}
+
+
 async def _run_crawl(job_id: str, req_data: dict, store: JobStore) -> None:
     store.update(job_id, status="processing")
     try:
@@ -190,15 +253,61 @@ def create_extraction_app(storage_root: str = "storage") -> Any:
     async def extract(req: ExtractRequest):
         """Async extract: URL + schema → JSON. Returns job_id to poll."""
         job = store.create("extract", req.url, req.model_dump())
-        asyncio.create_task(_run_extract(job.job_id, req.model_dump(), store))
+
+        async def _run_and_notify() -> None:
+            await _run_extract(job.job_id, req.model_dump(), store)
+            finished = store.get(job.job_id)
+            if finished and req.webhook_url:
+                await _fire_webhook(req.webhook_url, job.job_id, finished.status, finished.result)
+
+        asyncio.create_task(_run_and_notify())
         return {"job_id": job.job_id, "status": "processing"}
 
     @app.post("/api/v1/crawl", status_code=202)
     async def crawl(req: CrawlRequest):
         """Async crawl: URL + depth → pages. Returns job_id to poll."""
         job = store.create("crawl", req.url, req.model_dump())
-        asyncio.create_task(_run_crawl(job.job_id, req.model_dump(), store))
+
+        async def _run_and_notify() -> None:
+            await _run_crawl(job.job_id, req.model_dump(), store)
+            finished = store.get(job.job_id)
+            if finished and req.webhook_url:
+                await _fire_webhook(req.webhook_url, job.job_id, finished.status, finished.result)
+
+        asyncio.create_task(_run_and_notify())
         return {"job_id": job.job_id, "status": "processing"}
+
+    # ------------------------------------------------------------------
+    # Domain preset endpoints
+    # ------------------------------------------------------------------
+
+    def _make_domain_extract_handler(domain: str):
+        async def _handler(req: DomainExtractRequest):
+            schema_prompt = _DOMAIN_PROMPTS[domain]
+            ext_req_data = {
+                "url": req.url,
+                "schema_prompt": schema_prompt,
+                "use_js_rendering": req.use_js_rendering,
+                "webhook_url": req.webhook_url,
+                "proxy_url": req.proxy_url,
+            }
+            job = store.create(f"extract_{domain}", req.url, ext_req_data)
+
+            async def _run_and_notify() -> None:
+                await _run_extract(job.job_id, ext_req_data, store)
+                finished = store.get(job.job_id)
+                if finished and req.webhook_url:
+                    await _fire_webhook(req.webhook_url, job.job_id, finished.status, finished.result)
+
+            asyncio.create_task(_run_and_notify())
+            return {"job_id": job.job_id, "status": "processing", "domain": domain}
+        _handler.__name__ = f"extract_{domain}"
+        return _handler
+
+    for _domain in ("ecommerce", "news", "legal"):
+        app.post(f"/api/v1/extract/{_domain}", status_code=202)(
+            _make_domain_extract_handler(_domain)
+        )
 
     @app.get("/api/v1/jobs")
     def list_jobs(

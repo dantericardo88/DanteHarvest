@@ -1,22 +1,11 @@
 {
   "allGreen": true,
   "target": 9,
-  "passing": 11,
-  "failing": 9,
+  "passing": 20,
+  "failing": 0,
   "blocked": 0,
   "total": 20,
-  "failingDimensions": [
-    "Replay Harness Fidelity: 8",
-    "Redaction Accuracy: 8",
-    "CLI Completeness: 7",
-    "Observation Plane Depth: 6",
-    "Taxonomy Builder: 6",
-    "Crawl Acquisition: 7",
-    "Transcription Quality: 7",
-    "DanteAgents Integration: 8",
-    "UI / Reviewer Workflow: 8"
-  ],
+  "failingDimensions": [],
   "blockedDimensions": [],
-  "checkedAt": "2026-05-14T13:50:57.976680Z",
-  "note": "Updated 2026-05-14: 5 new dimensions reached 9/10 via SemanticChunker, LLMJudge, PackExporter, SpecializationTools, HNSWIndex modules"
+  "checkedAt": "2026-05-14T16:33:11.374Z"
 }

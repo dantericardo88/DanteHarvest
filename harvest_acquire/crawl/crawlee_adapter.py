@@ -32,6 +32,7 @@ Constitutional guarantees:
 
 from __future__ import annotations
 
+import asyncio
 import re
 import time
 import urllib.request
@@ -176,10 +177,84 @@ def _fetch_url(
         raise AcquisitionError(f"Failed to fetch {url}: {e}") from e
 
 
-async def _fetch_url_playwright(url: str, timeout: int = 15000) -> tuple[str, int]:
+_SPA_MUTATION_SCRIPT = """
+() => new Promise((resolve) => {
+    let settled = false;
+    const done = () => { if (!settled) { settled = true; resolve(); } };
+    const observer = new MutationObserver(() => {
+        clearTimeout(timer);
+        timer = setTimeout(done, 300);
+    });
+    observer.observe(document.body || document.documentElement, {
+        childList: true, subtree: true, attributes: true
+    });
+    let timer = setTimeout(() => { observer.disconnect(); done(); }, 2000);
+})
+"""
+
+_WAIT_STRATEGIES = ("networkidle", "domcontentloaded", "load", "commit")
+
+_SPA_MARKERS = (
+    "react", "vue", "angular", "__NEXT_DATA__", "ng-version",
+    "data-reactroot", "data-v-", "_nuxt", "svelte", "ember",
+)
+
+
+def _auto_detect_spa(html: str) -> bool:
+    """Heuristically detect if a page is a SPA based on common framework markers."""
+    sample = html[:8000].lower()
+    return any(marker.lower() in sample for marker in _SPA_MARKERS)
+
+
+async def wait_for_content_stable(page, quiet_ms: int = 500, max_wait_ms: int = 5000) -> None:
     """
-    Fetch a URL using Playwright headless Chromium (JS rendering).
-    Returns (html_content, status_code). Raises AcquisitionError on failure.
+    Wait until DOM mutations settle for at least `quiet_ms` milliseconds.
+    Uses a MutationObserver with a debounced timer. Fail-open on error.
+    """
+    script = f"""
+    () => new Promise((resolve) => {{
+        let settled = false;
+        const done = () => {{ if (!settled) {{ settled = true; resolve(); }} }};
+        const observer = new MutationObserver(() => {{
+            clearTimeout(timer);
+            timer = setTimeout(done, {quiet_ms});
+        }});
+        observer.observe(document.body || document.documentElement, {{
+            childList: true, subtree: true, attributes: true
+        }});
+        let timer = setTimeout(() => {{ observer.disconnect(); done(); }}, {max_wait_ms});
+    }})
+    """
+    try:
+        await page.evaluate(script)
+    except Exception:
+        pass
+
+
+async def wait_for_selector_or_timeout(
+    page, selector: str, timeout_ms: int = 5000
+) -> bool:
+    """Wait for a CSS selector to appear. Returns True if found, False on timeout."""
+    try:
+        await page.wait_for_selector(selector, timeout=timeout_ms)
+        return True
+    except Exception:
+        return False
+
+
+async def _fetch_url_playwright(
+    url: str,
+    timeout: int = 15000,
+    wait_until: str = "networkidle",
+    spa_mode: bool = False,
+    extra_wait_ms: int = 0,
+) -> tuple[str, int]:
+    """
+    Fetch a URL using Playwright headless Chromium with configurable SPA strategies.
+
+    wait_until: Playwright load event — "networkidle" | "domcontentloaded" | "load" | "commit"
+    spa_mode:   After page load, wait for DOM mutation quiet period (MutationObserver-based).
+    extra_wait_ms: Fixed post-load delay in ms (e.g. for lazy-loaded content).
     """
     try:
         from playwright.async_api import async_playwright
@@ -187,6 +262,9 @@ async def _fetch_url_playwright(url: str, timeout: int = 15000) -> tuple[str, in
         raise AcquisitionError(
             "playwright not installed. Run: pip install playwright && playwright install chromium"
         ) from e
+
+    if wait_until not in _WAIT_STRATEGIES:
+        wait_until = "networkidle"
 
     status_code = 200
     async with async_playwright() as pw:
@@ -200,11 +278,34 @@ async def _fetch_url_playwright(url: str, timeout: int = 15000) -> tuple[str, in
                     status_code = response.status
 
             page.on("response", _capture_status)
+
+            from typing import cast as _cast, Literal as _Literal
+            _WU = _cast(
+                _Literal["commit", "domcontentloaded", "load", "networkidle"],
+                wait_until,
+            )
+            # Primary load attempt with requested strategy
             try:
-                await page.goto(url, wait_until="networkidle", timeout=timeout)
+                await page.goto(url, wait_until=_WU, timeout=timeout)
             except Exception:
-                # domcontentloaded is sufficient if networkidle times out
-                await page.goto(url, wait_until="domcontentloaded", timeout=timeout)
+                # Fall back: domcontentloaded is sufficient if networkidle times out
+                try:
+                    await page.goto(url, wait_until="domcontentloaded", timeout=timeout)
+                except Exception:
+                    pass  # Best-effort — capture whatever the page has
+
+            # SPA quiescence: wait until DOM mutations settle
+            if spa_mode:
+                try:
+                    await page.evaluate(_SPA_MUTATION_SCRIPT)
+                except Exception:
+                    pass  # Mutation observer failure never aborts the fetch
+
+            # Fixed post-load delay for lazy-rendered content
+            if extra_wait_ms > 0:
+                import asyncio as _asyncio
+                await _asyncio.sleep(extra_wait_ms / 1000)
+
             html = await page.content()
         finally:
             await browser.close()
@@ -246,6 +347,11 @@ class CrawleeAdapter:
         use_sitemap: bool = True,
         respect_robots: bool = True,
         robots_user_agent: str = "HarvestBot",
+        wait_until: str = "networkidle",
+        spa_mode: bool = False,
+        extra_wait_ms: int = 0,
+        rate_limiter: Optional[Any] = None,
+        default_rps: float = 1.0,
     ):
         self._use_js = use_js_rendering and _is_playwright_available()
         self.chain_writer = chain_writer
@@ -255,6 +361,14 @@ class CrawleeAdapter:
         self._stealth = use_stealth_headers
         self._use_sitemap = use_sitemap
         self._respect_robots = respect_robots
+        self._wait_until = wait_until if wait_until in _WAIT_STRATEGIES else "networkidle"
+        self._spa_mode = spa_mode
+        self._extra_wait_ms = extra_wait_ms
+        if rate_limiter is not None:
+            self._rate_limiter: Optional[Any] = rate_limiter
+        else:
+            from harvest_acquire.crawl.domain_rate_limiter import DomainRateLimiter
+            self._rate_limiter = DomainRateLimiter(default_rps=default_rps)
         if respect_robots:
             from harvest_acquire.crawl.robots_checker import RobotsChecker
             self._robots: Optional[Any] = RobotsChecker(user_agent=robots_user_agent)
@@ -270,9 +384,55 @@ class CrawleeAdapter:
     def rendering_mode(self) -> str:
         return "playwright" if self._use_js else "http"
 
+    async def _fetch_with_retry(
+        self,
+        url: str,
+        max_attempts: int = 3,
+        base_delay_s: float = 1.0,
+    ) -> tuple[str, int]:
+        """
+        Fetch url with exponential-backoff retry for transient errors.
+        - 429: wait for Retry-After (via rate limiter) and retry
+        - 5xx: retry with exponential backoff
+        - 4xx (not 429): no retry — permanent failure
+        - Network error (AcquisitionError): retry up to max_attempts
+        """
+        last_exc: Optional[Exception] = None
+        for attempt in range(1, max_attempts + 1):
+            try:
+                html, status_code = await self._fetch(url)
+            except AcquisitionError as e:
+                last_exc = e
+                if attempt < max_attempts:
+                    await asyncio.sleep(base_delay_s * (2 ** (attempt - 1)))
+                continue
+
+            if status_code == 429:
+                if self._rate_limiter is not None:
+                    self._rate_limiter.record_result(url, 429)
+                    await self._rate_limiter.wait_for_token(url)
+                elif attempt < max_attempts:
+                    await asyncio.sleep(base_delay_s * (2 ** (attempt - 1)))
+                continue
+
+            if 500 <= status_code < 600 and attempt < max_attempts:
+                await asyncio.sleep(base_delay_s * (2 ** (attempt - 1)))
+                continue
+
+            return html, status_code
+
+        if last_exc is not None:
+            raise last_exc
+        return "", 503
+
     async def _fetch(self, url: str) -> tuple[str, int]:
         if self._use_js:
-            return await _fetch_url_playwright(url)
+            return await _fetch_url_playwright(
+                url,
+                wait_until=self._wait_until,
+                spa_mode=self._spa_mode,
+                extra_wait_ms=self._extra_wait_ms,
+            )
         return _fetch_url(url, proxy_url=self._proxy_url, use_stealth_headers=self._stealth)
 
     async def crawl(  # noqa: PLR0912
@@ -334,11 +494,17 @@ class CrawleeAdapter:
                     continue
                 await self._robots.async_respect_delay(current_url)
 
+            if self._rate_limiter is not None:
+                await self._rate_limiter.wait_for_token(current_url)
+
             try:
-                html, status_code = await self._fetch(current_url)
+                html, status_code = await self._fetch_with_retry(current_url)
             except AcquisitionError as e:
                 errors.append({"url": current_url, "error": str(e)})
                 continue
+
+            if self._rate_limiter is not None:
+                self._rate_limiter.record_result(current_url, status_code)
 
             if not html or status_code >= 400:
                 errors.append({"url": current_url, "status_code": status_code})

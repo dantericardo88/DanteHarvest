@@ -61,6 +61,65 @@ class TaxonomyGraph:
     def top_terms(self, n: int = 10) -> List[str]:
         return [node.term for node in sorted(self.nodes, key=lambda x: -x.frequency)[:n]]
 
+    def to_jsonld(self, base_uri: str = "https://danteharvestai.com/taxonomy/") -> dict:
+        """Export the taxonomy as a JSON-LD graph (schema.org DefinedTermSet)."""
+        context = {
+            "@context": {
+                "@vocab": "https://schema.org/",
+                "harvest": "https://danteharvestai.com/vocab#",
+            }
+        }
+        terms = []
+        for node in self.nodes:
+            entry: Dict[str, Any] = {
+                "@id": f"{base_uri}{node.term.replace(' ', '_')}",
+                "@type": "DefinedTerm",
+                "name": node.term,
+                "harvest:frequency": node.frequency,
+                "inDefinedTermSet": f"{base_uri}{self.domain}",
+            }
+            if node.parent:
+                entry["broaderTransitive"] = {"@id": f"{base_uri}{node.parent.replace(' ', '_')}"}
+            if node.children:
+                entry["narrowerTransitive"] = [
+                    {"@id": f"{base_uri}{c.replace(' ', '_')}"} for c in node.children
+                ]
+            terms.append(entry)
+        return {
+            **context,
+            "@graph": [
+                {
+                    "@id": f"{base_uri}{self.domain}",
+                    "@type": "DefinedTermSet",
+                    "name": self.domain,
+                    "harvest:source_pack_count": self.source_pack_count,
+                },
+                *terms,
+            ],
+        }
+
+    def merge(self, other: "TaxonomyGraph") -> "TaxonomyGraph":
+        """Merge two TaxonomyGraphs into a new combined graph."""
+        node_map: Dict[str, TaxonomyNode] = {n.term: n for n in self.nodes}
+        for other_node in other.nodes:
+            if other_node.term in node_map:
+                existing = node_map[other_node.term]
+                node_map[other_node.term] = TaxonomyNode(
+                    term=existing.term,
+                    frequency=existing.frequency + other_node.frequency,
+                    parent=existing.parent or other_node.parent,
+                    children=list(set(existing.children + other_node.children)),
+                )
+            else:
+                node_map[other_node.term] = other_node
+        merged_edges = list(set(self.edges + other.edges))
+        return TaxonomyGraph(
+            domain=self.domain,
+            nodes=list(node_map.values()),
+            edges=merged_edges,
+            source_pack_count=self.source_pack_count + other.source_pack_count,
+        )
+
 
 class TaxonomyBuilder:
     """

@@ -1,0 +1,17 @@
+{
+  "messageId": "msg.lease.vector_search_integration.2026-05-14T13-03-43.embedded.2026-05-14T13-04-36.2026-05-14T14-05-24.3695",
+  "type": "merge_ready",
+  "fromLease": "lease.vector_search_integration.2026-05-14T13-03-43.embedded.2026-05-14T13-04-36",
+  "toLease": "broadcast",
+  "summary": "Embedded host completed lease lease.vector_search_integration.2026-05-14T13-03-43.embedded.2026-05-14T13-04-36 with 1 file change(s). Verify-court can review.",
+  "impact": "consumer_update_required",
+  "requiresAck": false,
+  "status": "pending_ack",
+  "createdAt": "2026-05-14T14:05:24.859Z",
+  "metadata": {
+    "workPacketId": "work.vector_search_integration.2026-05-14T13-03-43",
+    "filesChanged": [
+      "harvest_index\\search\\pack_vector_store.py"
+    ]
+  }
+}

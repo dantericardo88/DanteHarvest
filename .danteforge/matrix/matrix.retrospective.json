@@ -1,0 +1,72 @@
+{
+  "runId": "run-1778767996704",
+  "generatedAt": "2026-05-14T14:13:17.213Z",
+  "startedAt": "2026-05-14T14:13:17.120Z",
+  "completedAt": "2026-05-14T14:13:17.213Z",
+  "bestPerformingProvider": "embedded",
+  "highestConflictArea": "(none)",
+  "mostReliableGate": "required_command:npm run typecheck",
+  "weakestGate": "forbidden_paths",
+  "mergeBottleneck": "No significant bottleneck",
+  "providerPerformance": [
+    {
+      "provider": "embedded",
+      "runsAttempted": 4,
+      "runsSucceeded": 4,
+      "runsFailed": 0,
+      "avgTokensPerRun": 0,
+      "avgRuntimeMinutes": 57.646590625,
+      "conflictsCaused": 0,
+      "redTeamFailures": 0
+    }
+  ],
+  "conflictPatterns": [],
+  "gateEffectiveness": [
+    {
+      "gateName": "forbidden_paths",
+      "triggered": 4,
+      "caughtIssues": 0,
+      "falsePositives": 0
+    },
+    {
+      "gateName": "protected_paths",
+      "triggered": 4,
+      "caughtIssues": 0,
+      "falsePositives": 0
+    },
+    {
+      "gateName": "lease_compliance",
+      "triggered": 4,
+      "caughtIssues": 2,
+      "falsePositives": 0
+    },
+    {
+      "gateName": "required_command:npm run typecheck",
+      "triggered": 4,
+      "caughtIssues": 4,
+      "falsePositives": 0
+    },
+    {
+      "gateName": "required_command:npm test",
+      "triggered": 4,
+      "caughtIssues": 4,
+      "falsePositives": 0
+    },
+    {
+      "gateName": "no_stub_scan",
+      "triggered": 4,
+      "caughtIssues": 0,
+      "falsePositives": 0
+    },
+    {
+      "gateName": "dimension_score",
+      "triggered": 4,
+      "caughtIssues": 0,
+      "falsePositives": 0
+    }
+  ],
+  "highRiskFiles": [],
+  "recommendedNextRunChanges": [
+    "4/4 branches blocked or rejected — review pre-flight verification"
+  ]
+}

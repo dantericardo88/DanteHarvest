@@ -45,6 +45,7 @@ class _BrowserSlot:
     state: str = "active"           # active | retired
     error_count: int = 0
     launched_at: float = field(default_factory=time.time)
+    profile: Dict[str, Any] = field(default_factory=dict)  # device fingerprint profile
 
     def uptime_secs(self) -> float:
         return time.time() - self.launched_at
@@ -58,33 +59,136 @@ class _BrowserSlot:
 # ---------------------------------------------------------------------------
 
 DEVICE_PROFILES: Dict[str, Dict[str, Any]] = {
-    "chrome_windows": {
+    # ── Desktop: Chrome ──────────────────────────────────────────────────
+    "chrome_windows_1080p": {
         "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
         "viewport": {"width": 1920, "height": 1080},
         "timezone_id": "America/New_York",
     },
-    "chrome_mac": {
+    "chrome_windows_1366": {
+        "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36",
+        "viewport": {"width": 1366, "height": 768},
+        "timezone_id": "America/Chicago",
+    },
+    "chrome_windows_4k": {
+        "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+        "viewport": {"width": 3840, "height": 2160},
+        "timezone_id": "America/Los_Angeles",
+    },
+    "chrome_mac_m1": {
         "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
         "viewport": {"width": 1440, "height": 900},
         "timezone_id": "America/Los_Angeles",
     },
-    "firefox_windows": {
-        "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:125.0) Gecko/20100101 Firefox/125.0",
-        "viewport": {"width": 1366, "height": 768},
-        "timezone_id": "Europe/London",
-    },
-    "chrome_linux": {
-        "user_agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+    "chrome_mac_1280": {
+        "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_4_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
         "viewport": {"width": 1280, "height": 800},
+        "timezone_id": "America/Denver",
+    },
+    "chrome_linux_1080p": {
+        "user_agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+        "viewport": {"width": 1920, "height": 1080},
         "timezone_id": "Europe/Berlin",
     },
-    "mobile_safari": {
+    "chrome_linux_1280": {
+        "user_agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36",
+        "viewport": {"width": 1280, "height": 800},
+        "timezone_id": "Europe/Paris",
+    },
+    # ── Desktop: Firefox ─────────────────────────────────────────────────
+    "firefox_windows_1080p": {
+        "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:125.0) Gecko/20100101 Firefox/125.0",
+        "viewport": {"width": 1920, "height": 1080},
+        "timezone_id": "Europe/London",
+    },
+    "firefox_windows_768": {
+        "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:124.0) Gecko/20100101 Firefox/124.0",
+        "viewport": {"width": 1366, "height": 768},
+        "timezone_id": "America/Toronto",
+    },
+    "firefox_mac": {
+        "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 14.4; rv:125.0) Gecko/20100101 Firefox/125.0",
+        "viewport": {"width": 1440, "height": 900},
+        "timezone_id": "America/Vancouver",
+    },
+    "firefox_linux": {
+        "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:125.0) Gecko/20100101 Firefox/125.0",
+        "viewport": {"width": 1280, "height": 1024},
+        "timezone_id": "Europe/Amsterdam",
+    },
+    # ── Desktop: Safari ──────────────────────────────────────────────────
+    "safari_mac_1440": {
+        "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_4_1) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4.1 Safari/605.1.15",
+        "viewport": {"width": 1440, "height": 900},
+        "timezone_id": "America/Los_Angeles",
+    },
+    "safari_mac_1280": {
+        "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 13_6) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.6 Safari/605.1.15",
+        "viewport": {"width": 1280, "height": 800},
+        "timezone_id": "America/New_York",
+    },
+    # ── Mobile: iOS / iPhone ─────────────────────────────────────────────
+    "mobile_iphone_15": {
         "user_agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_4_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4.1 Mobile/15E148 Safari/604.1",
         "viewport": {"width": 390, "height": 844},
         "timezone_id": "America/Chicago",
         "is_mobile": True,
     },
+    "mobile_iphone_se": {
+        "user_agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 16_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.6 Mobile/15E148 Safari/604.1",
+        "viewport": {"width": 375, "height": 667},
+        "timezone_id": "America/New_York",
+        "is_mobile": True,
+    },
+    "mobile_ipad_pro": {
+        "user_agent": "Mozilla/5.0 (iPad; CPU OS 17_4_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4.1 Mobile/15E148 Safari/604.1",
+        "viewport": {"width": 1024, "height": 1366},
+        "timezone_id": "America/Chicago",
+        "is_mobile": True,
+    },
+    # ── Mobile: Android ──────────────────────────────────────────────────
+    "mobile_android_chrome": {
+        "user_agent": "Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.6367.82 Mobile Safari/537.36",
+        "viewport": {"width": 412, "height": 915},
+        "timezone_id": "America/Los_Angeles",
+        "is_mobile": True,
+    },
+    "mobile_android_samsung": {
+        "user_agent": "Mozilla/5.0 (Linux; Android 14; SM-S918B) AppleWebKit/537.36 (KHTML, like Gecko) SamsungBrowser/24.0 Chrome/117.0.0.0 Mobile Safari/537.36",
+        "viewport": {"width": 360, "height": 780},
+        "timezone_id": "Europe/Berlin",
+        "is_mobile": True,
+    },
+    "mobile_android_tablet": {
+        "user_agent": "Mozilla/5.0 (Linux; Android 13; Pixel Tablet) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+        "viewport": {"width": 1280, "height": 800},
+        "timezone_id": "America/New_York",
+        "is_mobile": False,
+    },
+    # ── Regional / locale ─────────────────────────────────────────────────
+    "chrome_jp": {
+        "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+        "viewport": {"width": 1366, "height": 768},
+        "timezone_id": "Asia/Tokyo",
+    },
+    "chrome_br": {
+        "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+        "viewport": {"width": 1366, "height": 768},
+        "timezone_id": "America/Sao_Paulo",
+    },
+    "chrome_in": {
+        "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+        "viewport": {"width": 1280, "height": 720},
+        "timezone_id": "Asia/Kolkata",
+    },
 }
+
+# Alias backward-compatible names
+DEVICE_PROFILES["chrome_windows"] = DEVICE_PROFILES["chrome_windows_1080p"]
+DEVICE_PROFILES["chrome_mac"] = DEVICE_PROFILES["chrome_mac_m1"]
+DEVICE_PROFILES["firefox_windows"] = DEVICE_PROFILES["firefox_windows_1080p"]
+DEVICE_PROFILES["chrome_linux"] = DEVICE_PROFILES["chrome_linux_1080p"]
+DEVICE_PROFILES["mobile_safari"] = DEVICE_PROFILES["mobile_iphone_15"]
 
 
 class PlaywrightPool:
@@ -194,7 +298,7 @@ class PlaywrightPool:
         async with self._lock:
             slot = await self._find_or_launch_slot()
             await self._call_hook("pre_page_create", pool=self, browser=slot.browser)
-            profile = getattr(slot, "_profile", {})
+            profile = slot.profile
             context_opts: Dict[str, Any] = {}
             if profile.get("user_agent"):
                 context_opts["user_agent"] = profile["user_agent"]
@@ -257,8 +361,7 @@ class PlaywrightPool:
             launch_opts["proxy"] = {"server": self.proxy_url}
         browser = await self._playwright.chromium.launch(**launch_opts)
         profile = self._pick_profile()
-        slot = _BrowserSlot(browser=browser)
-        slot._profile = profile  # stored for context creation in _get_page
+        slot = _BrowserSlot(browser=browser, profile=profile)
         self._slots.append(slot)
         await self._call_hook("post_launch", pool=self, browser=browser)
         logger.debug("PlaywrightPool: launched browser (total=%d)", len(self._slots))
@@ -311,7 +414,7 @@ class PlaywrightPool:
         """Per-browser health metrics for monitoring integrations."""
         browsers = []
         for i, slot in enumerate(self._slots):
-            profile = getattr(slot, "_profile", {})
+            profile = slot.profile
             browsers.append({
                 "index": i,
                 "state": slot.state,
@@ -327,4 +430,41 @@ class PlaywrightPool:
             "active_count": sum(1 for s in self._slots if s.state == "active"),
             "total_errors": sum(s.error_count for s in self._slots),
             "browsers": browsers,
+        }
+
+    async def warmup(self, n: int = 1) -> int:
+        """
+        Pre-launch up to `n` browsers so they are ready before the first request.
+        Returns the number of browsers successfully launched.
+        Call after open() to warm the pool.
+        Fail-open: browser launch errors are swallowed.
+        """
+        if not self._open:
+            return 0
+        launched = 0
+        async with self._lock:
+            current = len([s for s in self._slots if s.state == "active"])
+            to_launch = min(n, self.max_browsers - current)
+            for _ in range(to_launch):
+                try:
+                    slot = await self._launch_slot()
+                    self._slots.append(slot)
+                    launched += 1
+                except Exception as e:
+                    logger.warning("PlaywrightPool.warmup: launch failed: %s", e)
+        return launched
+
+    def quota_stats(self) -> Dict[str, Any]:
+        """Per-browser quota usage — pages served vs retire threshold."""
+        return {
+            "retire_after_pages": self.retire_after_pages,
+            "browsers": [
+                {
+                    "index": i,
+                    "pages_served": s.pages_served,
+                    "quota_pct": round(s.pages_served / max(self.retire_after_pages, 1) * 100, 1),
+                    "state": s.state,
+                }
+                for i, s in enumerate(self._slots)
+            ],
         }

@@ -66,12 +66,18 @@ class LLMTaxonomyEnricher:
     def __init__(
         self,
         api_key: Optional[str] = None,
-        model: str = "gpt-4o-mini",
+        model: str = "claude-haiku-4-5-20251001",
         base_url: Optional[str] = None,
         min_confidence: float = 0.5,
         llm_timeout: float = 30.0,
+        backend: str = "anthropic",
     ) -> None:
-        self.api_key = api_key or os.environ.get("OPENAI_API_KEY")
+        self.backend = backend  # "anthropic" | "openai"
+        # Anthropic is the preferred default; fall back to OpenAI if configured
+        if backend == "anthropic":
+            self.api_key = api_key or os.environ.get("ANTHROPIC_API_KEY")
+        else:
+            self.api_key = api_key or os.environ.get("OPENAI_API_KEY")
         self.model = model
         self.base_url = base_url
         self.min_confidence = min_confidence
@@ -141,8 +147,10 @@ class LLMTaxonomyEnricher:
         if self._llm_available is False:
             return False
         try:
-            import openai  # noqa: F401 — lazy import check
-
+            if self.backend == "anthropic":
+                import anthropic  # noqa: F401
+            else:
+                import openai  # noqa: F401
             self._llm_available = True
             return True
         except ImportError:
@@ -150,18 +158,45 @@ class LLMTaxonomyEnricher:
             return False
 
     def _llm_extract(self, graph: TaxonomyGraph) -> List[SPOTriple]:
-        """Call OpenAI-compatible API to extract SPO triples from node labels."""
-        import openai  # type: ignore[import]
+        """Extract SPO triples using the configured LLM backend (Anthropic by default)."""
+        terms = [node.term for node in graph.nodes[:20]]
+        prompt = self._build_prompt(terms, graph.domain)
 
+        if self.backend == "anthropic":
+            return self._llm_extract_anthropic(prompt)
+        return self._llm_extract_openai(prompt)
+
+    def _llm_extract_anthropic(self, prompt: str) -> List[SPOTriple]:
+        import anthropic
+        client = anthropic.Anthropic(api_key=self.api_key)
+        system = (
+            "You are a knowledge graph extraction assistant. "
+            "Extract subject-predicate-object triples from domain terms. "
+            'Respond with valid JSON only: {"triples": [{"subject": "...", "predicate": "...", "object": "...", "confidence": 0.9}]}'
+        )
+        msg = client.messages.create(
+            model=self.model,
+            max_tokens=1024,
+            messages=[{"role": "user", "content": f"{system}\n\n{prompt}"}],
+        )
+        from anthropic.types import TextBlock as _TextBlock
+        raw = next(
+            (block.text for block in msg.content if isinstance(block, _TextBlock)),
+            "{}",
+        ).strip()
+        if raw.startswith("```"):
+            raw = raw.split("```")[1]
+            if raw.startswith("json"):
+                raw = raw[4:]
+        return self._parse_llm_response(raw)
+
+    def _llm_extract_openai(self, prompt: str) -> List[SPOTriple]:
+        import openai  # type: ignore[import]
         client = openai.OpenAI(
             api_key=self.api_key,
             **({"base_url": self.base_url} if self.base_url else {}),
             timeout=self.llm_timeout,
         )
-
-        terms = [node.term for node in graph.nodes[:20]]  # Cap at 20 nodes per call
-        prompt = self._build_prompt(terms, graph.domain)
-
         response = client.chat.completions.create(
             model=self.model,
             messages=[
@@ -170,7 +205,7 @@ class LLMTaxonomyEnricher:
                     "content": (
                         "You are a knowledge graph extraction assistant. "
                         "Extract subject-predicate-object triples from domain terms. "
-                        "Respond with a JSON array of {subject, predicate, object, confidence} objects."
+                        "Respond with JSON: {\"triples\": [{\"subject\": \"...\", \"predicate\": \"...\", \"object\": \"...\", \"confidence\": 0.9}]}"
                     ),
                 },
                 {"role": "user", "content": prompt},
@@ -178,7 +213,6 @@ class LLMTaxonomyEnricher:
             response_format={"type": "json_object"},
             temperature=0.0,
         )
-
         raw = response.choices[0].message.content or "{}"
         return self._parse_llm_response(raw)
 

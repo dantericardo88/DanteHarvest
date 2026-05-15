@@ -137,9 +137,12 @@ class TestPackRegistry:
 class TestReplayHarness:
     @pytest.mark.asyncio
     async def test_noop_executor_all_pass(self):
+        async def noop_executor(**kwargs):
+            return {"passed": True, "output": None}
+
         pack = _make_workflow_pack()
         pack.steps = [PackStep(id="s1", action="click"), PackStep(id="s2", action="type")]
-        harness = ReplayHarness()
+        harness = ReplayHarness(step_executor=noop_executor)
         report = await harness.replay(pack, run_id="r1")
         assert report.pass_rate == 1.0
         assert report.passed_count == 2

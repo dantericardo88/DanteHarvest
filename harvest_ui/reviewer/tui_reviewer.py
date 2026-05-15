@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import enum
 import json
+import uuid
 from dataclasses import dataclass, field
 from typing import Any, Callable, Dict, List, Optional, Sequence
 
@@ -124,6 +125,8 @@ class TUIReviewer:
         console: Optional[Any] = None,
         input_fn: Optional[Callable[[str], str]] = None,
         on_decision: Optional[Callable[[ReviewDecision], None]] = None,
+        chain_writer: Optional[Any] = None,
+        session_run_id: Optional[str] = None,
     ) -> None:
         _require_rich()
         self.packs: List[Dict[str, Any]] = packs or []
@@ -131,6 +134,8 @@ class TUIReviewer:
         self._input_fn = input_fn
         self.on_decision = on_decision
         self.decisions: List[ReviewDecision] = []
+        self._chain_writer = chain_writer
+        self._session_run_id = session_run_id or str(uuid.uuid4())
 
     # ------------------------------------------------------------------
     # Queue display
@@ -358,6 +363,7 @@ class TUIReviewer:
                 reason=reason,
             )
             self.decisions.append(record)
+            self._emit_chain_entry(record)
 
             if self.on_decision:
                 self.on_decision(record)
@@ -384,6 +390,35 @@ class TUIReviewer:
     # ------------------------------------------------------------------
     # Helpers
     # ------------------------------------------------------------------
+
+    def _emit_chain_entry(self, record: ReviewDecision) -> None:
+        """Emit reviewer decision to the append-only evidence chain (if wired)."""
+        if self._chain_writer is None:
+            return
+        try:
+            import asyncio
+            from harvest_core.provenance.chain_entry import ChainEntry
+            entry = ChainEntry(
+                run_id=self._session_run_id,
+                signal="review.decision",
+                machine="tui_reviewer",
+                data={
+                    "pack_id": record.pack_id,
+                    "decision": record.decision.value,
+                    "reason": record.reason,
+                    "notes": record.notes,
+                },
+            )
+            try:
+                loop = asyncio.get_event_loop()
+                if loop.is_running():
+                    loop.create_task(self._chain_writer.append(entry))
+                else:
+                    loop.run_until_complete(self._chain_writer.append(entry))
+            except RuntimeError:
+                asyncio.run(self._chain_writer.append(entry))
+        except Exception:
+            pass  # Chain write failure never blocks the reviewer
 
     def _print_summary(self, decisions: List[ReviewDecision]) -> None:
         approved = sum(1 for d in decisions if d.decision == Decision.APPROVE)

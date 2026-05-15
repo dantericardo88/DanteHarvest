@@ -1,0 +1,357 @@
+{
+  "generatedAt": "2026-05-14T15:03:26.175Z",
+  "reports": [
+    {
+      "id": "gate.lease.vector_search_integration.2026-05-14T13-03-43.embedded.2026-05-14T13-04-36.2026-05-14T14-07-11",
+      "leaseId": "lease.vector_search_integration.2026-05-14T13-03-43.embedded.2026-05-14T13-04-36",
+      "workPacketId": "work.vector_search_integration.2026-05-14T13-03-43",
+      "status": "failed",
+      "checks": [
+        {
+          "name": "forbidden_paths",
+          "status": "passed",
+          "details": "no forbidden paths edited"
+        },
+        {
+          "name": "protected_paths",
+          "status": "passed",
+          "details": "no frozen paths edited"
+        },
+        {
+          "name": "lease_compliance",
+          "status": "failed",
+          "details": "changed file harvest_index\\search\\pack_vector_store.py is OUTSIDE lease's allowed write paths"
+        },
+        {
+          "name": "required_command:npm run typecheck",
+          "status": "failed",
+          "details": "exit 4294963238: npm error code ENOENT\nnpm error syscall open\nnpm error path C:\\Projects\\DanteHarvest\\.danteforge-worktrees\\lease.vector_search_integration.2026-05-14T13-03-43.embedded.2026-05-14T13-04-36\\package.json"
+        },
+        {
+          "name": "required_command:npm test",
+          "status": "failed",
+          "details": "exit 4294963238: npm error code ENOENT\nnpm error syscall open\nnpm error path C:\\Projects\\DanteHarvest\\.danteforge-worktrees\\lease.vector_search_integration.2026-05-14T13-03-43.embedded.2026-05-14T13-04-36\\package.json"
+        },
+        {
+          "name": "no_stub_scan",
+          "status": "passed",
+          "details": "no stubs detected"
+        },
+        {
+          "name": "dimension_score",
+          "status": "passed",
+          "details": "pending merge-court arbitration for vector_search_integration"
+        }
+      ],
+      "generatedAt": "2026-05-14T14:07:11.621Z"
+    },
+    {
+      "id": "gate.lease.replay_harness_fidelity.2026-05-14T13-03-43.embedded.2026-05-14T13-04-37.2026-05-14T14-07-13",
+      "leaseId": "lease.replay_harness_fidelity.2026-05-14T13-03-43.embedded.2026-05-14T13-04-37",
+      "workPacketId": "work.replay_harness_fidelity.2026-05-14T13-03-43",
+      "status": "failed",
+      "checks": [
+        {
+          "name": "forbidden_paths",
+          "status": "passed",
+          "details": "no forbidden paths edited"
+        },
+        {
+          "name": "protected_paths",
+          "status": "passed",
+          "details": "no frozen paths edited"
+        },
+        {
+          "name": "lease_compliance",
+          "status": "passed",
+          "details": "all changes within lease scope"
+        },
+        {
+          "name": "required_command:npm run typecheck",
+          "status": "failed",
+          "details": "exit 4294963238: npm error code ENOENT\nnpm error syscall open\nnpm error path C:\\Projects\\DanteHarvest\\.danteforge-worktrees\\lease.replay_harness_fidelity.2026-05-14T13-03-43.embedded.2026-05-14T13-04-37\\package.json\nn"
+        },
+        {
+          "name": "required_command:npm test",
+          "status": "failed",
+          "details": "exit 4294963238: npm error code ENOENT\nnpm error syscall open\nnpm error path C:\\Projects\\DanteHarvest\\.danteforge-worktrees\\lease.replay_harness_fidelity.2026-05-14T13-03-43.embedded.2026-05-14T13-04-37\\package.json\nn"
+        },
+        {
+          "name": "no_stub_scan",
+          "status": "passed",
+          "details": "no stubs detected"
+        },
+        {
+          "name": "dimension_score",
+          "status": "passed",
+          "details": "pending merge-court arbitration for replay_harness_fidelity"
+        }
+      ],
+      "generatedAt": "2026-05-14T14:07:13.394Z"
+    },
+    {
+      "id": "gate.lease.redaction_accuracy.2026-05-14T13-03-43.embedded.2026-05-14T13-04-37.2026-05-14T14-07-16",
+      "leaseId": "lease.redaction_accuracy.2026-05-14T13-03-43.embedded.2026-05-14T13-04-37",
+      "workPacketId": "work.redaction_accuracy.2026-05-14T13-03-43",
+      "status": "failed",
+      "checks": [
+        {
+          "name": "forbidden_paths",
+          "status": "passed",
+          "details": "no forbidden paths edited"
+        },
+        {
+          "name": "protected_paths",
+          "status": "passed",
+          "details": "no frozen paths edited"
+        },
+        {
+          "name": "lease_compliance",
+          "status": "passed",
+          "details": "all changes within lease scope"
+        },
+        {
+          "name": "required_command:npm run typecheck",
+          "status": "failed",
+          "details": "exit 4294963238: npm error code ENOENT\nnpm error syscall open\nnpm error path C:\\Projects\\DanteHarvest\\.danteforge-worktrees\\lease.redaction_accuracy.2026-05-14T13-03-43.embedded.2026-05-14T13-04-37\\package.json\nnpm er"
+        },
+        {
+          "name": "required_command:npm test",
+          "status": "failed",
+          "details": "exit 4294963238: npm error code ENOENT\nnpm error syscall open\nnpm error path C:\\Projects\\DanteHarvest\\.danteforge-worktrees\\lease.redaction_accuracy.2026-05-14T13-03-43.embedded.2026-05-14T13-04-37\\package.json\nnpm er"
+        },
+        {
+          "name": "no_stub_scan",
+          "status": "passed",
+          "details": "no stubs detected"
+        },
+        {
+          "name": "dimension_score",
+          "status": "passed",
+          "details": "pending merge-court arbitration for redaction_accuracy"
+        }
+      ],
+      "generatedAt": "2026-05-14T14:07:16.838Z"
+    },
+    {
+      "id": "gate.lease.cli_completeness.2026-05-14T13-03-43.embedded.2026-05-14T13-04-37.2026-05-14T14-07-18",
+      "leaseId": "lease.cli_completeness.2026-05-14T13-03-43.embedded.2026-05-14T13-04-37",
+      "workPacketId": "work.cli_completeness.2026-05-14T13-03-43",
+      "status": "failed",
+      "checks": [
+        {
+          "name": "forbidden_paths",
+          "status": "passed",
+          "details": "no forbidden paths edited"
+        },
+        {
+          "name": "protected_paths",
+          "status": "passed",
+          "details": "no frozen paths edited"
+        },
+        {
+          "name": "lease_compliance",
+          "status": "failed",
+          "details": "changed file harvest_ui\\cli.py is OUTSIDE lease's allowed write paths"
+        },
+        {
+          "name": "required_command:npm run typecheck",
+          "status": "failed",
+          "details": "exit 4294963238: npm error code ENOENT\nnpm error syscall open\nnpm error path C:\\Projects\\DanteHarvest\\.danteforge-worktrees\\lease.cli_completeness.2026-05-14T13-03-43.embedded.2026-05-14T13-04-37\\package.json\nnpm erro"
+        },
+        {
+          "name": "required_command:npm test",
+          "status": "failed",
+          "details": "exit 4294963238: npm error code ENOENT\nnpm error syscall open\nnpm error path C:\\Projects\\DanteHarvest\\.danteforge-worktrees\\lease.cli_completeness.2026-05-14T13-03-43.embedded.2026-05-14T13-04-37\\package.json\nnpm erro"
+        },
+        {
+          "name": "no_stub_scan",
+          "status": "passed",
+          "details": "no stubs detected"
+        },
+        {
+          "name": "dimension_score",
+          "status": "passed",
+          "details": "pending merge-court arbitration for cli_completeness"
+        }
+      ],
+      "generatedAt": "2026-05-14T14:07:18.597Z"
+    },
+    {
+      "id": "gate.lease.redaction_accuracy.2026-05-14T14-39-11.embedded.2026-05-14T14-39-11.2026-05-14T15-03-24",
+      "leaseId": "lease.redaction_accuracy.2026-05-14T14-39-11.embedded.2026-05-14T14-39-11",
+      "workPacketId": "work.redaction_accuracy.2026-05-14T14-39-11",
+      "status": "failed",
+      "checks": [
+        {
+          "name": "forbidden_paths",
+          "status": "passed",
+          "details": "no forbidden paths edited"
+        },
+        {
+          "name": "protected_paths",
+          "status": "passed",
+          "details": "no frozen paths edited"
+        },
+        {
+          "name": "lease_compliance",
+          "status": "passed",
+          "details": "all changes within lease scope"
+        },
+        {
+          "name": "required_command:npm run typecheck",
+          "status": "failed",
+          "details": "exit 4294963238: npm error code ENOENT\nnpm error syscall open\nnpm error path C:\\Projects\\DanteHarvest\\.danteforge-worktrees\\lease.redaction_accuracy.2026-05-14T14-39-11.embedded.2026-05-14T14-39-11\\package.json\nnpm er"
+        },
+        {
+          "name": "required_command:npm test",
+          "status": "failed",
+          "details": "exit 4294963238: npm error code ENOENT\nnpm error syscall open\nnpm error path C:\\Projects\\DanteHarvest\\.danteforge-worktrees\\lease.redaction_accuracy.2026-05-14T14-39-11.embedded.2026-05-14T14-39-11\\package.json\nnpm er"
+        },
+        {
+          "name": "no_stub_scan",
+          "status": "passed",
+          "details": "no stubs detected"
+        },
+        {
+          "name": "dimension_score",
+          "status": "passed",
+          "details": "pending merge-court arbitration for redaction_accuracy"
+        }
+      ],
+      "generatedAt": "2026-05-14T15:03:24.017Z"
+    },
+    {
+      "id": "gate.lease.cli_completeness.2026-05-14T14-39-11.embedded.2026-05-14T14-39-12.2026-05-14T15-03-24",
+      "leaseId": "lease.cli_completeness.2026-05-14T14-39-11.embedded.2026-05-14T14-39-12",
+      "workPacketId": "work.cli_completeness.2026-05-14T14-39-11",
+      "status": "failed",
+      "checks": [
+        {
+          "name": "forbidden_paths",
+          "status": "passed",
+          "details": "no forbidden paths edited"
+        },
+        {
+          "name": "protected_paths",
+          "status": "passed",
+          "details": "no frozen paths edited"
+        },
+        {
+          "name": "lease_compliance",
+          "status": "passed",
+          "details": "all changes within lease scope"
+        },
+        {
+          "name": "required_command:npm run typecheck",
+          "status": "failed",
+          "details": "exit 4294963238: npm error code ENOENT\nnpm error syscall open\nnpm error path C:\\Projects\\DanteHarvest\\.danteforge-worktrees\\lease.cli_completeness.2026-05-14T14-39-11.embedded.2026-05-14T14-39-12\\package.json\nnpm erro"
+        },
+        {
+          "name": "required_command:npm test",
+          "status": "failed",
+          "details": "exit 4294963238: npm error code ENOENT\nnpm error syscall open\nnpm error path C:\\Projects\\DanteHarvest\\.danteforge-worktrees\\lease.cli_completeness.2026-05-14T14-39-11.embedded.2026-05-14T14-39-12\\package.json\nnpm erro"
+        },
+        {
+          "name": "no_stub_scan",
+          "status": "passed",
+          "details": "no stubs detected"
+        },
+        {
+          "name": "dimension_score",
+          "status": "passed",
+          "details": "pending merge-court arbitration for cli_completeness"
+        }
+      ],
+      "generatedAt": "2026-05-14T15:03:24.665Z"
+    },
+    {
+      "id": "gate.lease.observation_plane_depth.2026-05-14T14-39-11.embedded.2026-05-14T14-39-12.2026-05-14T15-03-25",
+      "leaseId": "lease.observation_plane_depth.2026-05-14T14-39-11.embedded.2026-05-14T14-39-12",
+      "workPacketId": "work.observation_plane_depth.2026-05-14T14-39-11",
+      "status": "failed",
+      "checks": [
+        {
+          "name": "forbidden_paths",
+          "status": "passed",
+          "details": "no forbidden paths edited"
+        },
+        {
+          "name": "protected_paths",
+          "status": "passed",
+          "details": "no frozen paths edited"
+        },
+        {
+          "name": "lease_compliance",
+          "status": "passed",
+          "details": "all changes within lease scope"
+        },
+        {
+          "name": "required_command:npm run typecheck",
+          "status": "failed",
+          "details": "exit 4294963238: npm error code ENOENT\nnpm error syscall open\nnpm error path C:\\Projects\\DanteHarvest\\.danteforge-worktrees\\lease.observation_plane_depth.2026-05-14T14-39-11.embedded.2026-05-14T14-39-12\\package.json\nn"
+        },
+        {
+          "name": "required_command:npm test",
+          "status": "failed",
+          "details": "exit 4294963238: npm error code ENOENT\nnpm error syscall open\nnpm error path C:\\Projects\\DanteHarvest\\.danteforge-worktrees\\lease.observation_plane_depth.2026-05-14T14-39-11.embedded.2026-05-14T14-39-12\\package.json\nn"
+        },
+        {
+          "name": "no_stub_scan",
+          "status": "passed",
+          "details": "no stubs detected"
+        },
+        {
+          "name": "dimension_score",
+          "status": "passed",
+          "details": "pending merge-court arbitration for observation_plane_depth"
+        }
+      ],
+      "generatedAt": "2026-05-14T15:03:25.379Z"
+    },
+    {
+      "id": "gate.lease.taxonomy_builder.2026-05-14T14-39-11.embedded.2026-05-14T14-39-13.2026-05-14T15-03-26",
+      "leaseId": "lease.taxonomy_builder.2026-05-14T14-39-11.embedded.2026-05-14T14-39-13",
+      "workPacketId": "work.taxonomy_builder.2026-05-14T14-39-11",
+      "status": "failed",
+      "checks": [
+        {
+          "name": "forbidden_paths",
+          "status": "passed",
+          "details": "no forbidden paths edited"
+        },
+        {
+          "name": "protected_paths",
+          "status": "passed",
+          "details": "no frozen paths edited"
+        },
+        {
+          "name": "lease_compliance",
+          "status": "passed",
+          "details": "all changes within lease scope"
+        },
+        {
+          "name": "required_command:npm run typecheck",
+          "status": "failed",
+          "details": "exit 4294963238: npm error code ENOENT\nnpm error syscall open\nnpm error path C:\\Projects\\DanteHarvest\\.danteforge-worktrees\\lease.taxonomy_builder.2026-05-14T14-39-11.embedded.2026-05-14T14-39-13\\package.json\nnpm erro"
+        },
+        {
+          "name": "required_command:npm test",
+          "status": "failed",
+          "details": "exit 4294963238: npm error code ENOENT\nnpm error syscall open\nnpm error path C:\\Projects\\DanteHarvest\\.danteforge-worktrees\\lease.taxonomy_builder.2026-05-14T14-39-11.embedded.2026-05-14T14-39-13\\package.json\nnpm erro"
+        },
+        {
+          "name": "no_stub_scan",
+          "status": "passed",
+          "details": "no stubs detected"
+        },
+        {
+          "name": "dimension_score",
+          "status": "passed",
+          "details": "pending merge-court arbitration for taxonomy_builder"
+        }
+      ],
+      "generatedAt": "2026-05-14T15:03:26.156Z"
+    }
+  ]
+}

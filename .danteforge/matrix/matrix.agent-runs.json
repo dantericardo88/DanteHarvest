@@ -1,0 +1,141 @@
+{
+  "generatedAt": "2026-05-14T15:42:21.440Z",
+  "runs": [
+    {
+      "runId": "embedded-complete.lease.vector_search_integration.2026-05-14T13-03-43.embedded.2026-05-14T13-04-36.1778767524840",
+      "leaseId": "lease.vector_search_integration.2026-05-14T13-03-43.embedded.2026-05-14T13-04-36",
+      "status": "completed",
+      "filesChanged": [
+        "harvest_index\\search\\pack_vector_store.py"
+      ],
+      "commandsExecuted": [],
+      "startedAt": "2026-05-14T13:04:37.810Z",
+      "completedAt": "2026-05-14T14:05:24.833Z",
+      "finalMessage": "Host AI completed embedded execution. 1 file(s) changed.",
+      "provider": "embedded"
+    },
+    {
+      "runId": "embedded-complete.lease.replay_harness_fidelity.2026-05-14T13-03-43.embedded.2026-05-14T13-04-37.1778767529991",
+      "leaseId": "lease.replay_harness_fidelity.2026-05-14T13-03-43.embedded.2026-05-14T13-04-37",
+      "status": "completed",
+      "filesChanged": [],
+      "commandsExecuted": [],
+      "startedAt": "2026-05-14T13:04:37.810Z",
+      "completedAt": "2026-05-14T14:05:29.986Z",
+      "finalMessage": "Host AI completed embedded execution. 0 file(s) changed.",
+      "provider": "embedded"
+    },
+    {
+      "runId": "embedded-complete.lease.redaction_accuracy.2026-05-14T13-03-43.embedded.2026-05-14T13-04-37.1778767544185",
+      "leaseId": "lease.redaction_accuracy.2026-05-14T13-03-43.embedded.2026-05-14T13-04-37",
+      "status": "completed",
+      "filesChanged": [],
+      "commandsExecuted": [],
+      "startedAt": "2026-05-14T13:04:37.810Z",
+      "completedAt": "2026-05-14T14:05:44.182Z",
+      "finalMessage": "Host AI completed embedded execution. 0 file(s) changed.",
+      "provider": "embedded"
+    },
+    {
+      "runId": "embedded-complete.lease.cli_completeness.2026-05-14T13-03-43.embedded.2026-05-14T13-04-37.1778767593296",
+      "leaseId": "lease.cli_completeness.2026-05-14T13-03-43.embedded.2026-05-14T13-04-37",
+      "status": "completed",
+      "filesChanged": [
+        "harvest_ui\\cli.py"
+      ],
+      "commandsExecuted": [],
+      "startedAt": "2026-05-14T13:04:37.810Z",
+      "completedAt": "2026-05-14T14:06:33.293Z",
+      "finalMessage": "Host AI completed embedded execution. 1 file(s) changed.",
+      "provider": "embedded"
+    },
+    {
+      "runId": "embedded-complete.lease.redaction_accuracy.2026-05-14T14-39-11.embedded.2026-05-14T14-39-11.1778770966551",
+      "leaseId": "lease.redaction_accuracy.2026-05-14T14-39-11.embedded.2026-05-14T14-39-11",
+      "status": "completed",
+      "filesChanged": [],
+      "commandsExecuted": [],
+      "startedAt": "2026-05-14T14:39:14.248Z",
+      "completedAt": "2026-05-14T15:02:46.548Z",
+      "finalMessage": "Host AI completed embedded execution. 0 file(s) changed.",
+      "provider": "embedded"
+    },
+    {
+      "runId": "embedded-complete.lease.cli_completeness.2026-05-14T14-39-11.embedded.2026-05-14T14-39-12.1778770967513",
+      "leaseId": "lease.cli_completeness.2026-05-14T14-39-11.embedded.2026-05-14T14-39-12",
+      "status": "completed",
+      "filesChanged": [],
+      "commandsExecuted": [],
+      "startedAt": "2026-05-14T14:39:14.248Z",
+      "completedAt": "2026-05-14T15:02:47.510Z",
+      "finalMessage": "Host AI completed embedded execution. 0 file(s) changed.",
+      "provider": "embedded"
+    },
+    {
+      "runId": "embedded-complete.lease.observation_plane_depth.2026-05-14T14-39-11.embedded.2026-05-14T14-39-12.1778770968673",
+      "leaseId": "lease.observation_plane_depth.2026-05-14T14-39-11.embedded.2026-05-14T14-39-12",
+      "status": "completed",
+      "filesChanged": [],
+      "commandsExecuted": [],
+      "startedAt": "2026-05-14T14:39:14.248Z",
+      "completedAt": "2026-05-14T15:02:48.671Z",
+      "finalMessage": "Host AI completed embedded execution. 0 file(s) changed.",
+      "provider": "embedded"
+    },
+    {
+      "runId": "embedded-complete.lease.taxonomy_builder.2026-05-14T14-39-11.embedded.2026-05-14T14-39-13.1778770969815",
+      "leaseId": "lease.taxonomy_builder.2026-05-14T14-39-11.embedded.2026-05-14T14-39-13",
+      "status": "completed",
+      "filesChanged": [],
+      "commandsExecuted": [],
+      "startedAt": "2026-05-14T14:39:14.247Z",
+      "completedAt": "2026-05-14T15:02:49.813Z",
+      "finalMessage": "Host AI completed embedded execution. 0 file(s) changed.",
+      "provider": "embedded"
+    },
+    {
+      "runId": "embedded-complete.lease.crawl_acquisition.2026-05-14T14-39-11.embedded.2026-05-14T15-03-42.1778772957055",
+      "leaseId": "lease.crawl_acquisition.2026-05-14T14-39-11.embedded.2026-05-14T15-03-42",
+      "status": "completed",
+      "filesChanged": [],
+      "commandsExecuted": [],
+      "startedAt": "2026-05-14T15:03:46.308Z",
+      "completedAt": "2026-05-14T15:35:57.047Z",
+      "finalMessage": "Host AI completed embedded execution. 0 file(s) changed.",
+      "provider": "embedded"
+    },
+    {
+      "runId": "embedded-complete.lease.transcription_quality.2026-05-14T14-39-11.embedded.2026-05-14T15-03-43.1778772967210",
+      "leaseId": "lease.transcription_quality.2026-05-14T14-39-11.embedded.2026-05-14T15-03-43",
+      "status": "completed",
+      "filesChanged": [],
+      "commandsExecuted": [],
+      "startedAt": "2026-05-14T15:03:46.309Z",
+      "completedAt": "2026-05-14T15:36:07.205Z",
+      "finalMessage": "Host AI completed embedded execution. 0 file(s) changed.",
+      "provider": "embedded"
+    },
+    {
+      "runId": "embedded-complete.lease.dante_agents_integration.2026-05-14T14-39-11.embedded.2026-05-14T15-03-44.1778772977769",
+      "leaseId": "lease.dante_agents_integration.2026-05-14T14-39-11.embedded.2026-05-14T15-03-44",
+      "status": "completed",
+      "filesChanged": [],
+      "commandsExecuted": [],
+      "startedAt": "2026-05-14T15:03:46.308Z",
+      "completedAt": "2026-05-14T15:36:17.764Z",
+      "finalMessage": "Host AI completed embedded execution. 0 file(s) changed.",
+      "provider": "embedded"
+    },
+    {
+      "runId": "embedded-complete.lease.multi_format_ingest.2026-05-14T14-39-11.embedded.2026-05-14T15-03-45.1778772984797",
+      "leaseId": "lease.multi_format_ingest.2026-05-14T14-39-11.embedded.2026-05-14T15-03-45",
+      "status": "completed",
+      "filesChanged": [],
+      "commandsExecuted": [],
+      "startedAt": "2026-05-14T15:03:46.308Z",
+      "completedAt": "2026-05-14T15:36:24.793Z",
+      "finalMessage": "Host AI completed embedded execution. 0 file(s) changed.",
+      "provider": "embedded"
+    }
+  ]
+}

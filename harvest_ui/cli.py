@@ -29,6 +29,7 @@ import asyncio
 import csv
 import io
 import json
+import os
 import sys
 from pathlib import Path
 
@@ -345,6 +346,35 @@ def cmd_run_status(args) -> int:
 # Observe commands
 # ---------------------------------------------------------------------------
 
+async def cmd_observe_daemon(args) -> int:
+    """Start the 24/7 observation daemon."""
+    from harvest_observe.daemon.observation_daemon import ObservationDaemon, DaemonConfig
+    from harvest_core.provenance.chain_writer import ChainWriter
+
+    storage_root = args.storage or "storage"
+    run_id = args.run_id or f"daemon-{Path(storage_root).name}"
+    chain_path = Path(storage_root) / "chain" / f"{run_id}.jsonl"
+    chain_path.parent.mkdir(parents=True, exist_ok=True)
+
+    writer = ChainWriter(chain_path, run_id)
+    config = DaemonConfig(
+        storage_root=storage_root,
+        run_id=run_id,
+        capture_interval_s=getattr(args, "interval", 5.0),
+        heartbeat_interval_s=getattr(args, "heartbeat", 60.0),
+        ocr_enabled=not getattr(args, "no_ocr", False),
+        event_capture_enabled=not getattr(args, "no_events", False),
+        pid_file=getattr(args, "pid_file", None),
+    )
+    daemon = ObservationDaemon(config=config, chain_writer=writer)
+    print(f"Starting observation daemon (run_id={run_id}, Ctrl+C to stop)")
+    try:
+        await daemon.run()
+    except KeyboardInterrupt:
+        daemon.stop()
+    return 0
+
+
 async def cmd_observe_browser(args) -> int:
     from harvest_observe.browser_session.session_recorder import SessionRecorder
     from harvest_core.provenance.chain_writer import ChainWriter
@@ -591,6 +621,17 @@ async def cmd_watch(args) -> int:
     return 0
 
 
+def cmd_tui(args) -> int:
+    """Launch the interactive TUI dashboard."""
+    from harvest_ui.tui_app import launch_tui
+    launch_tui(
+        storage_root=args.storage or "storage",
+        registry_root=args.registry or "registry",
+        refresh_interval=getattr(args, "refresh", 2.0) or 2.0,
+    )
+    return 0
+
+
 def cmd_serve(args) -> int:
     from harvest_ui.reviewer.server import serve
     try:
@@ -639,7 +680,7 @@ def cmd_schedule_add(args) -> int:
         print(f"  args    : {_json.dumps(entry.args)}")
         if entry.next_run:
             import datetime
-            print(f"  next_run: {datetime.datetime.utcfromtimestamp(entry.next_run).isoformat()}Z")
+            print(f"  next_run: {datetime.datetime.fromtimestamp(entry.next_run, tz=datetime.timezone.utc).isoformat()}Z")
         return 0
     except SchedulerError as e:
         print(f"error: {e}", file=sys.stderr)
@@ -791,6 +832,298 @@ def cmd_gc(args) -> int:
     return 0
 
 
+def cmd_replay_diff(args) -> int:
+    """Side-by-side diff of two ReplayReport JSON files."""
+    from harvest_index.registry.replay_differ import ReplayDiffer
+
+    fmt = getattr(args, "format", "text") or "text"
+    differ = ReplayDiffer()
+    try:
+        diff = differ.diff_files(Path(args.report_a), Path(args.report_b))
+    except Exception as e:
+        print(f"error: {e}", file=sys.stderr)
+        return 1
+
+    if fmt == "json":
+        print(json.dumps(diff.to_dict(), indent=2))
+    else:
+        print(diff.to_text())
+    return 0
+
+
+def cmd_pack_diff(args) -> int:
+    """Diff two pack versions stored in the registry."""
+    from harvest_index.registry.pack_registry import PackRegistry
+    from harvest_distill.packs.pack_differ import PackDiffer
+
+    root = args.registry or "registry"
+    fmt = getattr(args, "format", "text") or "text"
+
+    registry = PackRegistry(root=root)
+    differ = PackDiffer(changelog_dir=Path(root) / "changelogs")
+
+    try:
+        old_pack = registry.load_pack_json(args.old_pack_id)
+        new_pack = registry.load_pack_json(args.new_pack_id)
+    except Exception as e:
+        print(f"error: {e}", file=sys.stderr)
+        return 1
+
+    diff = differ.diff(
+        old_pack, new_pack,
+        old_label=args.old_pack_id,
+        new_label=args.new_pack_id,
+    )
+
+    if getattr(args, "record", False):
+        differ.record_changelog(diff)
+
+    if fmt == "json":
+        print(json.dumps(diff.to_dict(), indent=2))
+    else:
+        print(diff.to_text())
+    return 0
+
+
+def cmd_pack_changelog(args) -> int:
+    """Show changelog history for a pack."""
+    from harvest_distill.packs.pack_differ import PackDiffer
+
+    root = args.registry or "registry"
+    fmt = getattr(args, "format", "table") or "table"
+    differ = PackDiffer(changelog_dir=Path(root) / "changelogs")
+    entries = differ.changelog_for(args.pack_id)
+
+    if not entries:
+        print(f"No changelog entries for {args.pack_id}")
+        return 0
+
+    if fmt == "json":
+        print(json.dumps([e.to_dict() for e in entries], indent=2))
+        return 0
+
+    import datetime as _dt
+    print(f"\nChangelog for {args.pack_id}:\n")
+    for e in entries:
+        ts = _dt.datetime.fromtimestamp(e.recorded_at, tz=_dt.timezone.utc).strftime("%Y-%m-%d %H:%M")
+        print(f"  {ts}  {e.old_version_label} → {e.new_version_label}  {e.summary}")
+    print()
+    return 0
+
+
+def cmd_key_rotate(args) -> int:
+    """Rotate encryption key: re-encrypt all artifacts with a new passphrase."""
+    from harvest_core.crypto.key_manager import KeyManager, KeyRotator
+    from harvest_core.storage.encrypted_store import EncryptedStore
+
+    storage_root = Path(args.storage or "storage")
+    old_passphrase = os.environ.get("HARVEST_ENCRYPT_KEY") or getattr(args, "old_key", None)
+    new_passphrase = getattr(args, "new_key", None) or os.environ.get("HARVEST_ENCRYPT_KEY_NEW")
+
+    if not old_passphrase:
+        print("error: set HARVEST_ENCRYPT_KEY (or --old-key) for the current passphrase", file=sys.stderr)
+        return 1
+    if not new_passphrase:
+        print("error: set HARVEST_ENCRYPT_KEY_NEW (or --new-key) for the new passphrase", file=sys.stderr)
+        return 1
+
+    km = KeyManager(storage_root=storage_root)
+    km.initialize(old_passphrase)
+    old_store = EncryptedStore(passphrase=old_passphrase)
+    new_version = km.rotate(new_passphrase, hint=getattr(args, "hint", "") or "")
+    new_store = EncryptedStore(passphrase=new_passphrase)
+
+    artifacts_dir = storage_root / "artifacts"
+    if not artifacts_dir.exists():
+        print(json.dumps({"status": "ok", "rotated": 0, "note": "no artifacts directory"}))
+        return 0
+
+    rotator = KeyRotator(artifacts_dir=artifacts_dir, log_dir=storage_root / "crypto")
+    ok_count = err_count = 0
+    errors = []
+    for result in rotator.rotate(old_store, new_store):
+        if result.success:
+            ok_count += 1
+        else:
+            err_count += 1
+            errors.append({"path": result.artifact_path, "error": result.error})
+
+    print(json.dumps({
+        "status": "ok" if not err_count else "partial",
+        "new_version_id": new_version.version_id,
+        "rotated": ok_count,
+        "errors": err_count,
+        "error_details": errors,
+    }, indent=2))
+    return 0 if not err_count else 1
+
+
+def cmd_trace_view(args) -> int:
+    """Render a SessionTracer JSONL trace file in human-readable format."""
+    import datetime as _dt
+
+    trace_path = Path(args.trace_file)
+    if not trace_path.exists():
+        print(f"error: trace file not found: {trace_path}", file=sys.stderr)
+        return 1
+
+    lines = [l.strip() for l in trace_path.read_text(encoding="utf-8").splitlines() if l.strip()]
+    if not lines:
+        print("error: trace file is empty", file=sys.stderr)
+        return 1
+
+    try:
+        header = json.loads(lines[0])
+    except Exception:
+        print("error: could not parse trace header", file=sys.stderr)
+        return 1
+
+    events = []
+    for line in lines[1:]:
+        try:
+            events.append(json.loads(line))
+        except Exception:
+            pass
+
+    fmt = getattr(args, "format", "table") or "table"
+    filter_event = getattr(args, "filter", None)
+    if filter_event:
+        events = [e for e in events if filter_event.lower() in e.get("event_name", "").lower()]
+
+    if fmt == "json":
+        print(json.dumps({"header": header, "events": events}, indent=2))
+        return 0
+
+    # Table / human view
+    tid = header.get("trajectory_id", "?")
+    started = header.get("started_at", 0)
+    finished = header.get("finished_at") or 0
+    duration = finished - started if finished and started else None
+
+    started_str = _dt.datetime.fromtimestamp(started, tz=_dt.timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC") if started else "?"
+    dur_str = f"{duration:.2f}s" if duration is not None else "?"
+
+    print(f"\n{'='*64}")
+    print(f"  Trace: {tid}")
+    print(f"  Started  : {started_str}")
+    print(f"  Duration : {dur_str}")
+    if header.get("playwright_trace_path"):
+        print(f"  PW trace : {header['playwright_trace_path']}")
+    print(f"  Events   : {len(events)}")
+    print(f"{'='*64}")
+
+    for i, ev in enumerate(events, 1):
+        ts = ev.get("timestamp", 0)
+        rel = ts - started if started else 0
+        name = ev.get("event_name", "?")
+        data = ev.get("data", {})
+        shot = ev.get("screenshot_path")
+
+        data_str = "  ".join(f"{k}={json.dumps(v)}" for k, v in data.items()) if data else ""
+        shot_str = f"  [screenshot: {shot}]" if shot else ""
+        print(f"  [{i:3d}] +{rel:7.3f}s  {name:<35s}  {data_str}{shot_str}")
+
+    print(f"{'='*64}\n")
+    return 0
+
+
+def cmd_trace_list(args) -> int:
+    """List all trace files in the trace directory."""
+    import datetime as _dt
+
+    trace_dir = Path(getattr(args, "trace_dir", None) or "storage/traces")
+    if not trace_dir.exists():
+        print(json.dumps({"traces": [], "trace_dir": str(trace_dir)}))
+        return 0
+
+    traces = sorted(trace_dir.glob("*.jsonl"), key=lambda p: p.stat().st_mtime, reverse=True)
+    limit = getattr(args, "limit", 20) or 20
+    traces = traces[:limit]
+
+    fmt = getattr(args, "format", "table") or "table"
+
+    if fmt == "json":
+        out = []
+        for t in traces:
+            try:
+                first_line = t.read_text(encoding="utf-8").splitlines()[0]
+                header = json.loads(first_line)
+            except Exception:
+                header = {}
+            out.append({
+                "path": str(t),
+                "trajectory_id": header.get("trajectory_id", t.stem),
+                "started_at": header.get("started_at"),
+                "event_count": header.get("event_count", "?"),
+            })
+        print(json.dumps({"traces": out}, indent=2))
+        return 0
+
+    if not traces:
+        print(f"No traces found in {trace_dir}")
+        return 0
+
+    print(f"\nTraces in {trace_dir}  (newest first):\n")
+    for t in traces:
+        try:
+            first_line = t.read_text(encoding="utf-8").splitlines()[0]
+            header = json.loads(first_line)
+            tid = header.get("trajectory_id", t.stem)[:36]
+            started = header.get("started_at", 0)
+            count = header.get("event_count", "?")
+            started_str = _dt.datetime.fromtimestamp(started, tz=_dt.timezone.utc).strftime("%Y-%m-%d %H:%M") if started else "?"
+            print(f"  {started_str}  events={count:<4}  {tid}  {t.name}")
+        except Exception:
+            print(f"  (unreadable)  {t.name}")
+    print()
+    return 0
+
+
+def cmd_trace_diff(args) -> int:
+    """Side-by-side diff of two trace files."""
+    left_path = Path(args.trace_a)
+    right_path = Path(args.trace_b)
+
+    for p in (left_path, right_path):
+        if not p.exists():
+            print(f"error: trace file not found: {p}", file=sys.stderr)
+            return 1
+
+    def _load_events(p: Path):
+        lines = [l.strip() for l in p.read_text(encoding="utf-8").splitlines() if l.strip()]
+        header = json.loads(lines[0]) if lines else {}
+        events = []
+        for line in lines[1:]:
+            try:
+                events.append(json.loads(line))
+            except Exception:
+                pass
+        return header, events
+
+    h_a, ev_a = _load_events(left_path)
+    h_b, ev_b = _load_events(right_path)
+
+    max_len = max(len(ev_a), len(ev_b))
+    col = 50
+
+    print(f"\n{'A: ' + left_path.name:<{col}}  {'B: ' + right_path.name}")
+    print(f"{'─'*col}  {'─'*col}")
+
+    for i in range(max_len):
+        a_name = ev_a[i].get("event_name", "?") if i < len(ev_a) else "<missing>"
+        b_name = ev_b[i].get("event_name", "?") if i < len(ev_b) else "<missing>"
+        marker = "  " if a_name == b_name else "!!"
+        print(f"  {i+1:3d}  {a_name:<{col-6}}{marker}  {b_name}")
+
+    total_a, total_b = len(ev_a), len(ev_b)
+    matched = sum(
+        1 for i in range(min(total_a, total_b))
+        if ev_a[i].get("event_name") == ev_b[i].get("event_name")
+    )
+    print(f"\nA={total_a} events, B={total_b} events, {matched}/{min(total_a, total_b)} matched by position\n")
+    return 0
+
+
 def cmd_schedule_run_now(args) -> int:
     from harvest_ui.scheduler.scheduler import HarvestScheduler
     scheduler = HarvestScheduler(storage_root=args.storage)
@@ -882,6 +1215,16 @@ def build_parser() -> argparse.ArgumentParser:
     obs_browser.add_argument("trace", help="Path to trace JSON file")
     obs_browser.add_argument("--run-id", dest="run_id", default=None)
 
+    obs_daemon = observe_sub.add_parser("daemon", help="Start 24/7 observation daemon")
+    obs_daemon.add_argument("--run-id", dest="run_id", default=None)
+    obs_daemon.add_argument("--interval", type=float, default=5.0,
+                            help="Screen capture interval in seconds (default: 5.0)")
+    obs_daemon.add_argument("--heartbeat", type=float, default=60.0,
+                            help="Chain heartbeat interval in seconds (default: 60.0)")
+    obs_daemon.add_argument("--no-ocr", dest="no_ocr", action="store_true", default=False)
+    obs_daemon.add_argument("--no-events", dest="no_events", action="store_true", default=False)
+    obs_daemon.add_argument("--pid-file", dest="pid_file", default=None)
+
     # pack
     pack = sub.add_parser("pack", help="Pack registry operations")
     pack_sub = pack.add_subparsers(dest="pack_cmd", metavar="SUBCMD")
@@ -904,6 +1247,24 @@ def build_parser() -> argparse.ArgumentParser:
     pack_export.add_argument("--output", default=None, help="Output file path")
     pack_export.add_argument("--domain", default="general", help="Domain label")
 
+    pack_diff = pack_sub.add_parser("diff", help="Diff two pack versions")
+    pack_diff.add_argument("old_pack_id", help="Pack ID of the old version")
+    pack_diff.add_argument("new_pack_id", help="Pack ID of the new version")
+    pack_diff.add_argument(
+        "--format", dest="format", default="text",
+        choices=["text", "json"],
+        help="Output format (default: text)",
+    )
+    pack_diff.add_argument("--record", action="store_true", default=False,
+                           help="Append to changelog after diff")
+
+    pack_changelog = pack_sub.add_parser("changelog", help="Show changelog history for a pack")
+    pack_changelog.add_argument("pack_id", help="Pack ID")
+    pack_changelog.add_argument(
+        "--format", dest="format", default="table",
+        choices=["table", "json"],
+    )
+
     # watch
     watch_p = sub.add_parser("watch", help="Watch a directory and auto-ingest new files")
     watch_p.add_argument("directory", help="Directory to watch")
@@ -918,6 +1279,11 @@ def build_parser() -> argparse.ArgumentParser:
         help="Output format: table (default), json, csv",
     )
 
+    # tui
+    tui_p = sub.add_parser("tui", help="Launch interactive TUI dashboard")
+    tui_p.add_argument("--refresh", type=float, default=2.0,
+                       help="Refresh interval in seconds (default: 2.0)")
+
     # serve
     serve_p = sub.add_parser("serve", help="Start the pack reviewer web server")
     serve_p.add_argument("--host", default="127.0.0.1", help="Bind host (default: 127.0.0.1)")
@@ -925,6 +1291,61 @@ def build_parser() -> argparse.ArgumentParser:
 
     # version
     sub.add_parser("version", help="Print version")
+
+    # replay
+    replay = sub.add_parser("replay", help="Session replay operations")
+    replay_sub = replay.add_subparsers(dest="replay_cmd", metavar="SUBCMD")
+
+    replay_diff_p = replay_sub.add_parser("diff", help="Side-by-side diff of two replay reports")
+    replay_diff_p.add_argument("report_a", help="Path to first ReplayReport JSON")
+    replay_diff_p.add_argument("report_b", help="Path to second ReplayReport JSON")
+    replay_diff_p.add_argument(
+        "--format", dest="format", default="text",
+        choices=["text", "json"],
+    )
+
+    # key
+    key = sub.add_parser("key", help="Encryption key management")
+    key_sub = key.add_subparsers(dest="key_cmd", metavar="SUBCMD")
+
+    key_rotate = key_sub.add_parser("rotate", help="Rotate encryption key and re-encrypt artifacts")
+    key_rotate.add_argument("--old-key", dest="old_key", default=None,
+                            help="Current passphrase (default: HARVEST_ENCRYPT_KEY env var)")
+    key_rotate.add_argument("--new-key", dest="new_key", default=None,
+                            help="New passphrase (default: HARVEST_ENCRYPT_KEY_NEW env var)")
+    key_rotate.add_argument("--hint", dest="hint", default="",
+                            help="Non-secret label for the new key version")
+
+    # trace
+    trace = sub.add_parser("trace", help="Inspect SessionTracer JSONL trace files")
+    trace_sub = trace.add_subparsers(dest="trace_cmd", metavar="SUBCMD")
+
+    trace_view = trace_sub.add_parser("view", help="Render a trace file in human-readable format")
+    trace_view.add_argument("trace_file", help="Path to .jsonl trace file")
+    trace_view.add_argument(
+        "--format", dest="format", default="table",
+        choices=["table", "json"],
+        help="Output format (default: table)",
+    )
+    trace_view.add_argument(
+        "--filter", dest="filter", default=None,
+        help="Filter events by name substring",
+    )
+
+    trace_list = trace_sub.add_parser("list", help="List available trace files")
+    trace_list.add_argument(
+        "--trace-dir", dest="trace_dir", default="storage/traces",
+        help="Trace directory (default: storage/traces)",
+    )
+    trace_list.add_argument(
+        "--format", dest="format", default="table",
+        choices=["table", "json"],
+    )
+    trace_list.add_argument("--limit", type=int, default=20)
+
+    trace_diff = trace_sub.add_parser("diff", help="Side-by-side diff of two trace files")
+    trace_diff.add_argument("trace_a", help="First trace .jsonl file")
+    trace_diff.add_argument("trace_b", help="Second trace .jsonl file")
 
     # verify-chain
     vc_p = sub.add_parser("verify-chain", help="Verify the Merkle-sealed evidence chain")
@@ -1010,8 +1431,10 @@ def main(argv=None) -> int:
     elif args.command == "observe":
         if args.observe_cmd == "browser":
             return asyncio.run(cmd_observe_browser(args))
+        elif args.observe_cmd == "daemon":
+            return asyncio.run(cmd_observe_daemon(args))
         else:
-            print("error: specify 'harvest observe browser <trace>'", file=sys.stderr)
+            print("error: specify 'harvest observe browser|daemon'", file=sys.stderr)
             return 1
     elif args.command == "pack":
         if args.pack_cmd == "list":
@@ -1020,11 +1443,17 @@ def main(argv=None) -> int:
             return cmd_pack_promote(args)
         elif args.pack_cmd == "export":
             return cmd_pack_export(args)
+        elif args.pack_cmd == "diff":
+            return cmd_pack_diff(args)
+        elif args.pack_cmd == "changelog":
+            return cmd_pack_changelog(args)
         else:
             print("error: unknown pack subcommand", file=sys.stderr)
             return 1
     elif args.command == "stats":
         return cmd_registry_stats(args)
+    elif args.command == "tui":
+        return cmd_tui(args)
     elif args.command == "serve":
         return cmd_serve(args)
     elif args.command == "schedule":
@@ -1038,6 +1467,28 @@ def main(argv=None) -> int:
             return cmd_schedule_run_now(args)
         else:
             print("error: specify 'harvest schedule add|list|remove|run-now'", file=sys.stderr)
+            return 1
+    elif args.command == "replay":
+        if args.replay_cmd == "diff":
+            return cmd_replay_diff(args)
+        else:
+            print("error: specify 'harvest replay diff'", file=sys.stderr)
+            return 1
+    elif args.command == "key":
+        if args.key_cmd == "rotate":
+            return cmd_key_rotate(args)
+        else:
+            print("error: specify 'harvest key rotate'", file=sys.stderr)
+            return 1
+    elif args.command == "trace":
+        if args.trace_cmd == "view":
+            return cmd_trace_view(args)
+        elif args.trace_cmd == "list":
+            return cmd_trace_list(args)
+        elif args.trace_cmd == "diff":
+            return cmd_trace_diff(args)
+        else:
+            print("error: specify 'harvest trace view|list|diff'", file=sys.stderr)
             return 1
     elif args.command == "verify-chain":
         return cmd_verify_chain(args)

@@ -1,0 +1,17 @@
+{
+  "messageId": "msg.lease.cli_completeness.2026-05-14T13-03-43.embedded.2026-05-14T13-04-37.2026-05-14T14-06-33.2459",
+  "type": "merge_ready",
+  "fromLease": "lease.cli_completeness.2026-05-14T13-03-43.embedded.2026-05-14T13-04-37",
+  "toLease": "broadcast",
+  "summary": "Embedded host completed lease lease.cli_completeness.2026-05-14T13-03-43.embedded.2026-05-14T13-04-37 with 1 file change(s). Verify-court can review.",
+  "impact": "consumer_update_required",
+  "requiresAck": false,
+  "status": "pending_ack",
+  "createdAt": "2026-05-14T14:06:33.316Z",
+  "metadata": {
+    "workPacketId": "work.cli_completeness.2026-05-14T13-03-43",
+    "filesChanged": [
+      "harvest_ui\\cli.py"
+    ]
+  }
+}

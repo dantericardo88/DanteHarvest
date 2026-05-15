@@ -1,0 +1,16 @@
+{
+  "messageId": "msg.lease.dante_agents_integration.2026-05-14T14-39-11.embedded.2026-05-14T15-03-44.2026-05-14T15-03-46.6209",
+  "type": "human_decision_required",
+  "fromLease": "lease.dante_agents_integration.2026-05-14T14-39-11.embedded.2026-05-14T15-03-44",
+  "toLease": "broadcast",
+  "summary": "Lease lease.dante_agents_integration.2026-05-14T14-39-11.embedded.2026-05-14T15-03-44 finished wave 2 as awaiting_input (0 file change(s)).",
+  "impact": "informational",
+  "requiresAck": false,
+  "status": "pending_ack",
+  "createdAt": "2026-05-14T15:03:46.330Z",
+  "metadata": {
+    "provider": "embedded",
+    "waveNumber": "2",
+    "filesChanged": []
+  }
+}

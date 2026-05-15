@@ -1,0 +1,356 @@
+{
+  "generatedAt": "2026-05-14T15:41:58.537Z",
+  "packets": [
+    {
+      "id": "work.redaction_accuracy.2026-05-14T15-41-58",
+      "title": "Close gap on Redaction Accuracy",
+      "objective": "Move \"Redaction Accuracy\" from current score 7 toward target 9.",
+      "dimensionId": "redaction_accuracy",
+      "paths": {
+        "ownedPaths": [],
+        "readOnlyPaths": [],
+        "forbiddenPaths": []
+      },
+      "dependsOn": [],
+      "mayConflictWith": [],
+      "acceptanceCriteria": [
+        "Implementation passes typecheck and tests",
+        "Score moves from 7 toward 9",
+        "Harvest pattern from Add presidio (MIT) or spaCy NER for context-aware PII detection beyond regex patterns",
+        "Score for redaction_accuracy moves from 7 to at least 9 (gap: 2.0)"
+      ],
+      "proof": {
+        "proofRequired": [
+          "typecheck exits 0",
+          "tests pass",
+          "no forbidden files changed",
+          "dimension score moves verifiably"
+        ],
+        "requiredCommands": [
+          "npm run typecheck",
+          "npm test"
+        ]
+      },
+      "tasteGateRequired": false,
+      "redTeamRequired": false,
+      "rollbackPlan": "Remove worktree, discard branch, restore from Time Machine snapshot.",
+      "riskLevel": "medium",
+      "estimatedLoc": 200,
+      "estimatedMinutes": 30,
+      "createdAt": "2026-05-14T15:41:58.521Z",
+      "createdBy": "matrix-kernel"
+    },
+    {
+      "id": "work.cli_completeness.2026-05-14T15-41-58",
+      "title": "Close gap on CLI Completeness",
+      "objective": "Move \"CLI Completeness\" from current score 7 toward target 9.",
+      "dimensionId": "cli_completeness",
+      "paths": {
+        "ownedPaths": [],
+        "readOnlyPaths": [],
+        "forbiddenPaths": []
+      },
+      "dependsOn": [],
+      "mayConflictWith": [],
+      "acceptanceCriteria": [
+        "Implementation passes typecheck and tests",
+        "Score moves from 7 toward 9",
+        "Harvest pattern from Add `harvest ingest batch <dir>` for directory sweep + `harvest watch <dir>` for filesystem monitoring",
+        "Score for cli_completeness moves from 7 to at least 9 (gap: 2.0)"
+      ],
+      "proof": {
+        "proofRequired": [
+          "typecheck exits 0",
+          "tests pass",
+          "no forbidden files changed",
+          "dimension score moves verifiably"
+        ],
+        "requiredCommands": [
+          "npm run typecheck",
+          "npm test"
+        ]
+      },
+      "tasteGateRequired": false,
+      "redTeamRequired": false,
+      "rollbackPlan": "Remove worktree, discard branch, restore from Time Machine snapshot.",
+      "riskLevel": "medium",
+      "estimatedLoc": 200,
+      "estimatedMinutes": 30,
+      "createdAt": "2026-05-14T15:41:58.522Z",
+      "createdBy": "matrix-kernel"
+    },
+    {
+      "id": "work.observation_plane_depth.2026-05-14T15-41-58",
+      "title": "Close gap on Observation Plane Depth",
+      "objective": "Move \"Observation Plane Depth\" from current score 7 toward target 9.",
+      "dimensionId": "observation_plane_depth",
+      "paths": {
+        "ownedPaths": [],
+        "readOnlyPaths": [],
+        "forbiddenPaths": []
+      },
+      "dependsOn": [],
+      "mayConflictWith": [],
+      "acceptanceCriteria": [
+        "Implementation passes typecheck and tests",
+        "Score moves from 7 toward 9",
+        "Harvest pattern from Wire keyframe extractor (harvest_normalize/ocr/keyframes.py) into session_recorder so video files are auto-decomposed",
+        "Score for observation_plane_depth moves from 7 to at least 9 (gap: 2.0)"
+      ],
+      "proof": {
+        "proofRequired": [
+          "typecheck exits 0",
+          "tests pass",
+          "no forbidden files changed",
+          "dimension score moves verifiably"
+        ],
+        "requiredCommands": [
+          "npm run typecheck",
+          "npm test"
+        ]
+      },
+      "tasteGateRequired": false,
+      "redTeamRequired": false,
+      "rollbackPlan": "Remove worktree, discard branch, restore from Time Machine snapshot.",
+      "riskLevel": "medium",
+      "estimatedLoc": 200,
+      "estimatedMinutes": 30,
+      "createdAt": "2026-05-14T15:41:58.522Z",
+      "createdBy": "matrix-kernel"
+    },
+    {
+      "id": "work.taxonomy_builder.2026-05-14T15-41-58",
+      "title": "Close gap on Taxonomy Builder",
+      "objective": "Move \"Taxonomy Builder\" from current score 7 toward target 9.",
+      "dimensionId": "taxonomy_builder",
+      "paths": {
+        "ownedPaths": [],
+        "readOnlyPaths": [],
+        "forbiddenPaths": []
+      },
+      "dependsOn": [],
+      "mayConflictWith": [],
+      "acceptanceCriteria": [
+        "Implementation passes typecheck and tests",
+        "Score moves from 7 toward 9",
+        "Harvest pattern from Add LLM-enhanced taxonomy enrichment path (optional, local-first: uses Ollama or OpenAI when configured)",
+        "Score for taxonomy_builder moves from 7 to at least 9 (gap: 2.0)"
+      ],
+      "proof": {
+        "proofRequired": [
+          "typecheck exits 0",
+          "tests pass",
+          "no forbidden files changed",
+          "dimension score moves verifiably"
+        ],
+        "requiredCommands": [
+          "npm run typecheck",
+          "npm test"
+        ]
+      },
+      "tasteGateRequired": false,
+      "redTeamRequired": false,
+      "rollbackPlan": "Remove worktree, discard branch, restore from Time Machine snapshot.",
+      "riskLevel": "medium",
+      "estimatedLoc": 200,
+      "estimatedMinutes": 30,
+      "createdAt": "2026-05-14T15:41:58.527Z",
+      "createdBy": "matrix-kernel"
+    },
+    {
+      "id": "work.crawl_acquisition.2026-05-14T15-41-58",
+      "title": "Close gap on Crawl Acquisition",
+      "objective": "Move \"Crawl Acquisition\" from current score 8 toward target 9.",
+      "dimensionId": "crawl_acquisition",
+      "paths": {
+        "ownedPaths": [],
+        "readOnlyPaths": [],
+        "forbiddenPaths": []
+      },
+      "dependsOn": [],
+      "mayConflictWith": [],
+      "acceptanceCriteria": [
+        "Implementation passes typecheck and tests",
+        "Score moves from 8 toward 9",
+        "Harvest pattern from Add sitemap.xml parser to seed RequestQueue; add robots.txt crawl-delay respect to Crawlee adapter",
+        "Score for crawl_acquisition moves from 8 to at least 9 (gap: 1.0)"
+      ],
+      "proof": {
+        "proofRequired": [
+          "typecheck exits 0",
+          "tests pass",
+          "no forbidden files changed",
+          "dimension score moves verifiably"
+        ],
+        "requiredCommands": [
+          "npm run typecheck",
+          "npm test"
+        ]
+      },
+      "tasteGateRequired": false,
+      "redTeamRequired": false,
+      "rollbackPlan": "Remove worktree, discard branch, restore from Time Machine snapshot.",
+      "riskLevel": "low",
+      "estimatedLoc": 200,
+      "estimatedMinutes": 30,
+      "createdAt": "2026-05-14T15:41:58.527Z",
+      "createdBy": "matrix-kernel"
+    },
+    {
+      "id": "work.transcription_quality.2026-05-14T15-41-58",
+      "title": "Close gap on Transcription Quality",
+      "objective": "Move \"Transcription Quality\" from current score 7 toward target 9.",
+      "dimensionId": "transcription_quality",
+      "paths": {
+        "ownedPaths": [],
+        "readOnlyPaths": [],
+        "forbiddenPaths": []
+      },
+      "dependsOn": [],
+      "mayConflictWith": [],
+      "acceptanceCriteria": [
+        "Implementation passes typecheck and tests",
+        "Score moves from 7 toward 9",
+        "Harvest pattern from Add pyannote.audio (MIT) for speaker diarization so multi-speaker sessions produce per-speaker transcript segments",
+        "Score for transcription_quality moves from 7 to at least 9 (gap: 2.0)"
+      ],
+      "proof": {
+        "proofRequired": [
+          "typecheck exits 0",
+          "tests pass",
+          "no forbidden files changed",
+          "dimension score moves verifiably"
+        ],
+        "requiredCommands": [
+          "npm run typecheck",
+          "npm test"
+        ]
+      },
+      "tasteGateRequired": false,
+      "redTeamRequired": false,
+      "rollbackPlan": "Remove worktree, discard branch, restore from Time Machine snapshot.",
+      "riskLevel": "medium",
+      "estimatedLoc": 200,
+      "estimatedMinutes": 30,
+      "createdAt": "2026-05-14T15:41:58.534Z",
+      "createdBy": "matrix-kernel"
+    },
+    {
+      "id": "work.dante_agents_integration.2026-05-14T15-41-58",
+      "title": "Close gap on DanteAgents Integration",
+      "objective": "Move \"DanteAgents Integration\" from current score 8 toward target 9.",
+      "dimensionId": "dante_agents_integration",
+      "paths": {
+        "ownedPaths": [],
+        "readOnlyPaths": [],
+        "forbiddenPaths": []
+      },
+      "dependsOn": [],
+      "mayConflictWith": [],
+      "acceptanceCriteria": [
+        "Implementation passes typecheck and tests",
+        "Score moves from 8 toward 9",
+        "Harvest pattern from Add streaming export (emit packs as they're promoted, not batch-only) for real-time DanteAgents consumption",
+        "Score for dante_agents_integration moves from 8 to at least 9 (gap: 1.0)"
+      ],
+      "proof": {
+        "proofRequired": [
+          "typecheck exits 0",
+          "tests pass",
+          "no forbidden files changed",
+          "dimension score moves verifiably"
+        ],
+        "requiredCommands": [
+          "npm run typecheck",
+          "npm test"
+        ]
+      },
+      "tasteGateRequired": false,
+      "redTeamRequired": false,
+      "rollbackPlan": "Remove worktree, discard branch, restore from Time Machine snapshot.",
+      "riskLevel": "low",
+      "estimatedLoc": 200,
+      "estimatedMinutes": 30,
+      "createdAt": "2026-05-14T15:41:58.536Z",
+      "createdBy": "matrix-kernel"
+    },
+    {
+      "id": "work.multi_format_ingest.2026-05-14T15-41-58",
+      "title": "Close gap on Multi-Format Ingest",
+      "objective": "Move \"Multi-Format Ingest\" from current score 7 toward target 9.",
+      "dimensionId": "multi_format_ingest",
+      "paths": {
+        "ownedPaths": [],
+        "readOnlyPaths": [],
+        "forbiddenPaths": []
+      },
+      "dependsOn": [],
+      "mayConflictWith": [],
+      "acceptanceCriteria": [
+        "Implementation passes typecheck and tests",
+        "Score moves from 7 toward 9",
+        "Harvest pattern from Add spreadsheet ingest (openpyxl: MIT) to FileIngestor for XLSX/CSV with table-to-markdown conversion",
+        "Score for multi_format_ingest moves from 7 to at least 9 (gap: 2.0)"
+      ],
+      "proof": {
+        "proofRequired": [
+          "typecheck exits 0",
+          "tests pass",
+          "no forbidden files changed",
+          "dimension score moves verifiably"
+        ],
+        "requiredCommands": [
+          "npm run typecheck",
+          "npm test"
+        ]
+      },
+      "tasteGateRequired": false,
+      "redTeamRequired": false,
+      "rollbackPlan": "Remove worktree, discard branch, restore from Time Machine snapshot.",
+      "riskLevel": "medium",
+      "estimatedLoc": 200,
+      "estimatedMinutes": 30,
+      "createdAt": "2026-05-14T15:41:58.537Z",
+      "createdBy": "matrix-kernel"
+    },
+    {
+      "id": "work.ui_reviewer_workflow.2026-05-14T15-41-58",
+      "title": "Close gap on UI / Reviewer Workflow",
+      "objective": "Move \"UI / Reviewer Workflow\" from current score 6 toward target 9.",
+      "dimensionId": "ui_reviewer_workflow",
+      "paths": {
+        "ownedPaths": [],
+        "readOnlyPaths": [],
+        "forbiddenPaths": []
+      },
+      "dependsOn": [],
+      "mayConflictWith": [],
+      "acceptanceCriteria": [
+        "Implementation passes typecheck and tests",
+        "Score moves from 6 toward 9",
+        "Harvest pattern from Build harvest_ui/reviewer/server.py â€” a FastAPI server serving a React reviewer UI: pack diff, approve/reject, merge/split segments, confidence band visualization",
+        "Score for ui_reviewer_workflow moves from 6 to at least 9 (gap: 3.0)"
+      ],
+      "proof": {
+        "proofRequired": [
+          "typecheck exits 0",
+          "tests pass",
+          "no forbidden files changed",
+          "dimension score moves verifiably"
+        ],
+        "requiredCommands": [
+          "npm run typecheck",
+          "npm test"
+        ]
+      },
+      "tasteGateRequired": false,
+      "redTeamRequired": false,
+      "rollbackPlan": "Remove worktree, discard branch, restore from Time Machine snapshot.",
+      "riskLevel": "medium",
+      "estimatedLoc": 200,
+      "estimatedMinutes": 30,
+      "createdAt": "2026-05-14T15:41:58.537Z",
+      "createdBy": "matrix-kernel"
+    }
+  ]
+}

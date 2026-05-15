@@ -1,0 +1,19 @@
+{
+  "project": {
+    "projectId": "DanteHarvest",
+    "rootPath": "C:\\Projects\\DanteHarvest",
+    "detectedAt": "2026-05-14T12:55:34.999Z",
+    "buildCommands": [
+      "npm run build"
+    ],
+    "verifyCommands": [
+      "npm run typecheck",
+      "npm test"
+    ],
+    "protectedPaths": [],
+    "ownershipPath": ".danteforge/agent-ownership.json",
+    "evidenceDir": ".danteforge/evidence"
+  },
+  "nodes": [],
+  "generatedAt": "2026-05-14T12:55:34.999Z"
+}

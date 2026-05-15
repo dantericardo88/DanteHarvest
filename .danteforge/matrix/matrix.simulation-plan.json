@@ -1,0 +1,95 @@
+{
+  "generatedAt": "2026-05-14T14:39:11.071Z",
+  "waves": [
+    {
+      "waveNumber": 1,
+      "description": "Wave 1: 4 parallel-safe work packets",
+      "workPacketIds": [
+        "work.redaction_accuracy.2026-05-14T14-39-11",
+        "work.cli_completeness.2026-05-14T14-39-11",
+        "work.observation_plane_depth.2026-05-14T14-39-11",
+        "work.taxonomy_builder.2026-05-14T14-39-11"
+      ],
+      "estimatedDurationMinutes": 30,
+      "estimatedTokens": 24000,
+      "estimatedUsdLow": 0.07200000000000001,
+      "estimatedUsdHigh": 0.36,
+      "rationale": [
+        "Touches 4 dimension(s)"
+      ]
+    },
+    {
+      "waveNumber": 2,
+      "description": "Wave 2: 4 parallel-safe work packets",
+      "workPacketIds": [
+        "work.crawl_acquisition.2026-05-14T14-39-11",
+        "work.transcription_quality.2026-05-14T14-39-11",
+        "work.dante_agents_integration.2026-05-14T14-39-11",
+        "work.multi_format_ingest.2026-05-14T14-39-11"
+      ],
+      "estimatedDurationMinutes": 30,
+      "estimatedTokens": 24000,
+      "estimatedUsdLow": 0.07200000000000001,
+      "estimatedUsdHigh": 0.36,
+      "rationale": [
+        "Touches 4 dimension(s)"
+      ]
+    },
+    {
+      "waveNumber": 3,
+      "description": "Wave 3: 1 parallel-safe work packets",
+      "workPacketIds": [
+        "work.ui_reviewer_workflow.2026-05-14T14-39-11"
+      ],
+      "estimatedDurationMinutes": 30,
+      "estimatedTokens": 6000,
+      "estimatedUsdLow": 0.018000000000000002,
+      "estimatedUsdHigh": 0.09,
+      "rationale": [
+        "Touches 1 dimension(s)"
+      ]
+    }
+  ],
+  "safeParallelism": {
+    "requestedAgents": 4,
+    "safeAgentsNow": 4,
+    "recommendedWaveSize": 4,
+    "blockedWorkPackets": 0,
+    "highConflictPackets": 0,
+    "sequentialOnlyPackets": 0,
+    "reasoning": [
+      "All packets ready; no blockers detected"
+    ]
+  },
+  "riskSummary": {
+    "highestRiskAreas": [],
+    "sequentialBottlenecks": [],
+    "predictedConflicts": 0,
+    "requiredHumanApprovals": 0
+  },
+  "expectedReports": [
+    ".danteforge/matrix/matrix.project-graph.json",
+    ".danteforge/matrix/matrix.dimension-graph.json",
+    ".danteforge/matrix/matrix.work-graph.json",
+    ".danteforge/matrix/matrix.dependency-graph.json",
+    ".danteforge/matrix/matrix.lease-graph.json",
+    ".danteforge/matrix/matrix.evidence-graph.json",
+    ".danteforge/matrix/matrix.simulation-plan.json",
+    ".danteforge/matrix/matrix.ownership-map.json",
+    ".danteforge/matrix/matrix.conflicts.json",
+    ".danteforge/matrix/matrix.work-packets.json",
+    ".danteforge/matrix/matrix.leases.json",
+    ".danteforge/matrix/matrix.agent-runs.json",
+    ".danteforge/matrix/matrix.mailbox.json",
+    ".danteforge/matrix/matrix.gate-reports.json",
+    ".danteforge/matrix/matrix.red-team-reports.json",
+    ".danteforge/matrix/matrix.taste-gates.json",
+    ".danteforge/matrix/matrix.merge-decisions.json",
+    ".danteforge/matrix/matrix.retrospective.json",
+    ".danteforge/matrix/matrix.final-report.md",
+    ".danteforge/matrix/agent-memory"
+  ],
+  "totalEstimatedTokens": 54000,
+  "totalEstimatedUsdLow": 0.162,
+  "totalEstimatedUsdHigh": 0.8099999999999999
+}

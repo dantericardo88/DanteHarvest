@@ -1,0 +1,15 @@
+{
+  "messageId": "msg.lease.replay_harness_fidelity.2026-05-14T13-03-43.embedded.2026-05-14T13-04-37.2026-05-14T14-05-30.4031",
+  "type": "merge_ready",
+  "fromLease": "lease.replay_harness_fidelity.2026-05-14T13-03-43.embedded.2026-05-14T13-04-37",
+  "toLease": "broadcast",
+  "summary": "Embedded host completed lease lease.replay_harness_fidelity.2026-05-14T13-03-43.embedded.2026-05-14T13-04-37 with 0 file change(s). Verify-court can review.",
+  "impact": "informational",
+  "requiresAck": false,
+  "status": "pending_ack",
+  "createdAt": "2026-05-14T14:05:30.010Z",
+  "metadata": {
+    "workPacketId": "work.replay_harness_fidelity.2026-05-14T13-03-43",
+    "filesChanged": []
+  }
+}

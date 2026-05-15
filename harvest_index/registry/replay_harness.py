@@ -129,9 +129,19 @@ class ReplayReport:
         }
 
 
-# Default executor: always passes (used when no real executor is wired)
+# Fallback executor: always passes (only used if Playwright is unavailable)
 async def _noop_executor(**kwargs) -> Dict[str, Any]:
     return {"passed": True, "output": None}
+
+
+def _default_step_executor() -> Callable:
+    """Return PlaywrightStepExecutor if Playwright is available, else noop."""
+    try:
+        import playwright  # noqa: F401
+        from harvest_index.registry.playwright_executor import playwright_step_executor
+        return playwright_step_executor
+    except ImportError:
+        return _noop_executor
 
 
 class ReplayHarness:
@@ -158,7 +168,7 @@ class ReplayHarness:
         action_handlers: Optional[Dict[str, Callable]] = None,
     ):
         self.chain_writer = chain_writer
-        self.step_executor = step_executor or _noop_executor
+        self.step_executor = step_executor or _default_step_executor()
         # Hooks mirror Stagehand's preStepHook/postStepHook pattern:
         # pre_step_hook(step, context) — screenshot capture, state refresh
         # post_step_hook(step, result, context) — logging, assertion side-effects

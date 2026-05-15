@@ -17,6 +17,106 @@ auditLog:
   - "2026-04-21T23:31:21.966Z | mcp: score_all"
   - "2026-04-21T23:34:02.030Z | mcp: score_all"
   - "2026-04-21T23:56:32.541Z | mcp: score_all"
+  - "2026-05-14T14:16:55.836Z | llm: ollama/qwen2.5-coder:latest (135 chars
+    returned)"
+  - "2026-05-14T14:18:32.461Z | llm: ollama/qwen2.5-coder:latest (239 chars
+    returned)"
+  - "2026-05-14T14:18:58.938Z | llm: ollama/qwen2.5-coder:latest (236 chars
+    returned)"
+  - "2026-05-14T14:20:09.222Z | llm: ollama/qwen2.5-coder:latest (153 chars
+    returned)"
+  - "2026-05-14T14:20:43.160Z | llm: ollama/qwen2.5-coder:latest (96 chars
+    returned)"
+  - "2026-05-14T14:22:07.626Z | llm: ollama/qwen2.5-coder:latest (185 chars
+    returned)"
+  - "2026-05-14T14:22:40.483Z | llm: ollama/qwen2.5-coder:latest (191 chars
+    returned)"
+  - "2026-05-14T14:24:13.633Z | llm: ollama/qwen2.5-coder:latest (332 chars
+    returned)"
+  - "2026-05-14T14:24:19.003Z | llm: ollama/qwen2.5-coder:latest (292 chars
+    returned)"
+  - "2026-05-14T14:24:22.484Z | llm: ollama/qwen2.5-coder:latest (172 chars
+    returned)"
+  - "2026-05-14T14:24:25.373Z | llm: ollama/qwen2.5-coder:latest (119 chars
+    returned)"
+  - "2026-05-14T14:24:30.618Z | llm: ollama/qwen2.5-coder:latest (261 chars
+    returned)"
+  - "2026-05-14T14:24:33.845Z | llm: ollama/qwen2.5-coder:latest (164 chars
+    returned)"
+  - "2026-05-14T14:24:40.519Z | llm: ollama/qwen2.5-coder:latest (351 chars
+    returned)"
+  - "2026-05-14T14:24:44.186Z | llm: ollama/qwen2.5-coder:latest (178 chars
+    returned)"
+  - "2026-05-14T14:24:48.623Z | llm: ollama/qwen2.5-coder:latest (199 chars
+    returned)"
+  - "2026-05-14T14:24:55.170Z | llm: ollama/qwen2.5-coder:latest (193 chars
+    returned)"
+  - "2026-05-14T14:25:00.730Z | llm: ollama/qwen2.5-coder:latest (204 chars
+    returned)"
+  - "2026-05-14T14:25:07.044Z | llm: ollama/qwen2.5-coder:latest (268 chars
+    returned)"
+  - "2026-05-14T14:25:11.063Z | llm: ollama/qwen2.5-coder:latest (137 chars
+    returned)"
+  - "2026-05-14T16:13:24.949Z | llm: ollama/qwen2.5-coder:latest (201 chars
+    returned)"
+  - "2026-05-14T16:22:28.607Z | llm: ollama/qwen2.5-coder:latest (147 chars
+    returned, attempt 3)"
+  - "2026-05-14T16:24:41.741Z | llm: ollama/qwen2.5-coder:latest (163 chars
+    returned)"
+  - "2026-05-14T16:27:40.421Z | llm: ollama/qwen2.5-coder:latest (151 chars
+    returned)"
+  - "2026-05-14T16:29:57.521Z | llm: ollama/qwen2.5-coder:latest (136 chars
+    returned, attempt 2)"
+  - "2026-05-14T16:35:59.429Z | llm: ollama/qwen2.5-coder:latest (171 chars
+    returned, attempt 2)"
+  - "2026-05-14T16:48:05.327Z | llm: ollama/qwen2.5-coder:latest (136 chars
+    returned)"
+  - "2026-05-14T16:48:11.815Z | llm: ollama/qwen2.5-coder:latest (142 chars
+    returned)"
+  - "2026-05-14T16:53:06.612Z | llm: ollama/qwen2.5-coder:latest (154 chars
+    returned, attempt 2)"
+  - "2026-05-14T16:55:59.478Z | llm: ollama/qwen2.5-coder:latest (142 chars
+    returned)"
+  - "2026-05-14T16:57:19.603Z | llm: ollama/qwen2.5-coder:latest (268 chars
+    returned, attempt 3)"
+  - "2026-05-14T17:03:21.664Z | llm: ollama/qwen2.5-coder:latest (202 chars
+    returned, attempt 2)"
+  - "2026-05-14T17:03:56.282Z | llm: ollama/qwen2.5-coder:latest (211 chars
+    returned)"
+  - "2026-05-14T17:06:37.981Z | llm: ollama/qwen2.5-coder:latest (275 chars
+    returned, attempt 3)"
+  - "2026-05-14T17:09:36.849Z | llm: ollama/qwen2.5-coder:latest (150 chars
+    returned)"
+  - "2026-05-14T17:15:21.337Z | llm: ollama/qwen2.5-coder:latest (285 chars
+    returned, attempt 2)"
+  - "2026-05-14T17:17:23.873Z | llm: ollama/qwen2.5-coder:latest (128 chars
+    returned)"
+  - "2026-05-14T17:26:25.726Z | llm: ollama/qwen2.5-coder:latest (278 chars
+    returned, attempt 3)"
+  - "2026-05-14T17:33:08.219Z | llm: ollama/qwen2.5-coder:latest (200 chars
+    returned)"
+  - "2026-05-14T17:33:53.348Z | llm: ollama/qwen2.5-coder:latest (130 chars
+    returned, attempt 3)"
+  - "2026-05-14T17:38:41.126Z | llm: ollama/qwen2.5-coder:latest (160 chars
+    returned, attempt 2)"
+  - "2026-05-14T17:40:45.589Z | llm: ollama/qwen2.5-coder:latest (156 chars
+    returned)"
+  - "2026-05-14T17:45:01.064Z | llm: ollama/qwen2.5-coder:latest (214 chars
+    returned)"
+  - "2026-05-14T17:47:58.025Z | llm: ollama/qwen2.5-coder:latest (203 chars
+    returned)"
+  - "2026-05-14T17:52:16.891Z | llm: ollama/qwen2.5-coder:latest (150 chars
+    returned)"
+  - "2026-05-14T18:01:21.029Z | llm: ollama/qwen2.5-coder:latest (149 chars
+    returned, attempt 3)"
+  - "2026-05-14T18:03:02.195Z | llm: ollama/qwen2.5-coder:latest (192 chars
+    returned, attempt 2)"
+  - "2026-05-14T18:04:13.402Z | llm: ollama/qwen2.5-coder:latest (331 chars
+    returned)"
+  - "2026-05-14T18:07:04.534Z | llm: ollama/qwen2.5-coder:latest (123 chars
+    returned, attempt 2)"
+  - "2026-05-14T18:13:33.701Z | llm: ollama/qwen2.5-coder:latest (176 chars
+    returned, attempt 3)"
 profile: balanced
 constitution: CONSTITUTION.md
 enforcementMode: strict

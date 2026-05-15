@@ -27,7 +27,7 @@ import math
 from collections import Counter
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import List, Optional, Tuple
+from typing import Any, List, Optional, Tuple
 
 from harvest_normalize.chunking.chunker import Chunk, ChunkResult, ChunkStrategy
 
@@ -97,6 +97,7 @@ class SemanticChunker:
         max_chunk_size: int = 2048,
         merge_threshold: float = 0.35,
         overlap_sentences: int = 1,
+        embedding_model: Optional[str] = None,
     ):
         self.strategy = strategy
         self.target_chunk_size = target_chunk_size
@@ -104,6 +105,10 @@ class SemanticChunker:
         self.max_chunk_size = max_chunk_size
         self.merge_threshold = merge_threshold
         self.overlap_sentences = overlap_sentences
+        self._embedding_model_name = embedding_model
+        self._embedder: Optional[Any] = None
+        if embedding_model:
+            self._embedder = _load_sentence_transformer(embedding_model)
 
     def chunk(self, text: str, metadata: Optional[dict] = None) -> SemanticChunkResult:
         """Split text into semantically coherent chunks."""
@@ -138,6 +143,114 @@ class SemanticChunker:
             total_chunks=len(chunks),
             boundary_scores=scores,
         )
+
+    def chunk_with_overlap(
+        self,
+        text: str,
+        overlap_chars: int = 100,
+        metadata: Optional[dict] = None,
+    ) -> SemanticChunkResult:
+        """
+        Chunk with sliding overlap: each chunk shares `overlap_chars` characters
+        with its neighbours. Useful for RAG pipelines that need context continuity.
+        """
+        base = self.chunk(text, metadata=metadata)
+        if len(base.chunks) <= 1 or overlap_chars <= 0:
+            return base
+
+        overlapped: List[Chunk] = []
+        meta = metadata or {}
+        for i, chunk in enumerate(base.chunks):
+            prefix = ""
+            suffix = ""
+            if i > 0:
+                prev_text = base.chunks[i - 1].text
+                prefix = prev_text[-overlap_chars:] if len(prev_text) > overlap_chars else prev_text
+            if i < len(base.chunks) - 1:
+                next_text = base.chunks[i + 1].text
+                suffix = next_text[:overlap_chars] if len(next_text) > overlap_chars else next_text
+
+            new_text = (prefix + chunk.text + suffix) if (prefix or suffix) else chunk.text
+            overlapped.append(Chunk(
+                index=i,
+                text=new_text,
+                start_char=chunk.start_char,
+                end_char=chunk.end_char,
+                strategy=chunk.strategy,
+                metadata={**meta, "overlap_prefix_len": len(prefix), "overlap_suffix_len": len(suffix)},
+            ))
+
+        return SemanticChunkResult(
+            chunks=overlapped,
+            strategy=f"{base.strategy}+overlap",
+            source_length=base.source_length,
+            total_chunks=len(overlapped),
+            boundary_scores=base.boundary_scores,
+        )
+
+    def hierarchical_chunk(
+        self,
+        text: str,
+        parent_size: int = 1024,
+        child_size: int = 256,
+        metadata: Optional[dict] = None,
+    ) -> List[dict]:
+        """
+        Two-level hierarchical chunking for multi-level RAG:
+        - Parent chunks (large, for context retrieval)
+        - Child chunks (small, for precise answer extraction)
+
+        Returns a list of dicts: {"parent": Chunk, "children": List[Chunk]}
+        """
+        meta = metadata or {}
+        parent_chunker = SemanticChunker(
+            strategy=self.strategy,
+            target_chunk_size=parent_size,
+            min_chunk_size=parent_size // 4,
+        )
+        child_chunker = SemanticChunker(
+            strategy=SemanticStrategy.PARAGRAPH,
+            target_chunk_size=child_size,
+            min_chunk_size=child_size // 4,
+        )
+
+        parent_result = parent_chunker.chunk(text, metadata=meta)
+        hierarchy = []
+        for parent_chunk in parent_result.chunks:
+            child_result = child_chunker.chunk(parent_chunk.text, metadata={
+                **meta,
+                "parent_index": parent_chunk.index,
+                "parent_start_char": parent_chunk.start_char,
+            })
+            hierarchy.append({
+                "parent": parent_chunk,
+                "children": child_result.chunks,
+            })
+        return hierarchy
+
+    def chunk_documents(
+        self,
+        documents: List[dict],
+        text_key: str = "text",
+        id_key: str = "id",
+        extra_meta_keys: Optional[List[str]] = None,
+    ) -> List[SemanticChunkResult]:
+        """
+        Batch-chunk multiple documents, propagating per-document metadata into chunks.
+        Each document dict must have `text_key`; `id_key` and any `extra_meta_keys`
+        are copied into chunk metadata.
+        """
+        results = []
+        for doc in documents:
+            text = doc.get(text_key, "")
+            meta: dict = {}
+            if id_key in doc:
+                meta["doc_id"] = doc[id_key]
+            for k in (extra_meta_keys or []):
+                if k in doc:
+                    meta[k] = doc[k]
+            results.append(self.chunk(text, metadata=meta))
+        return results
 
     # ------------------------------------------------------------------
     # Paragraph splitting
@@ -257,14 +370,18 @@ class SemanticChunker:
         if len(paragraphs) <= 1:
             return self._paragraph_split(text, meta)
 
-        # Build TF-IDF vectors
-        vectors = [_tfidf_vector(p) for p in paragraphs]
-
         # Score boundaries between adjacent paragraphs
+        # Use sentence-transformers embeddings when available, else TF-IDF
         boundary_scores = []
-        for i in range(len(paragraphs) - 1):
-            sim = _cosine_sim(vectors[i], vectors[i + 1])
-            boundary_scores.append(sim)
+        if self._embedder is not None:
+            for i in range(len(paragraphs) - 1):
+                sim = _embedding_cosine_sim(self._embedder, paragraphs[i], paragraphs[i + 1])
+                boundary_scores.append(sim)
+        else:
+            vectors = [_tfidf_vector(p) for p in paragraphs]
+            for i in range(len(paragraphs) - 1):
+                sim = _cosine_sim(vectors[i], vectors[i + 1])
+                boundary_scores.append(sim)
 
         # Merge paragraphs across high-similarity boundaries
         merged_segments: List[str] = []
@@ -332,6 +449,35 @@ class SemanticChunker:
             ))
             search_from = max(search_from, end)
         return chunks
+
+
+# ---------------------------------------------------------------------------
+# Sentence-transformer helpers (optional, graceful fallback to TF-IDF)
+# ---------------------------------------------------------------------------
+
+def _load_sentence_transformer(model_name: str) -> Optional[Any]:
+    """Load a sentence-transformers model; return None if package not installed."""
+    try:
+        from sentence_transformers import SentenceTransformer  # type: ignore[import]
+        return SentenceTransformer(model_name)
+    except ImportError:
+        return None
+    except Exception:
+        return None
+
+
+def _embedding_cosine_sim(embedder: Any, text_a: str, text_b: str) -> float:
+    """Compute cosine similarity between two texts using a sentence-transformer."""
+    try:
+        import numpy as np
+        vecs = embedder.encode([text_a, text_b], convert_to_numpy=True)
+        a, b = vecs[0], vecs[1]
+        denom = (np.linalg.norm(a) * np.linalg.norm(b))
+        if denom == 0:
+            return 0.0
+        return float(np.dot(a, b) / denom)
+    except Exception:
+        return _cosine_sim(_tfidf_vector(text_a), _tfidf_vector(text_b))
 
 
 # ---------------------------------------------------------------------------
