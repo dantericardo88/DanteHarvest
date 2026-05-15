@@ -156,6 +156,46 @@ class RetentionScheduler:
         except Exception:
             pass  # GDPR webhook failure never blocks expiry enforcement
 
+    def wire_to_cron(
+        self,
+        scheduler: Any,
+        job_id: str = "retention-gc",
+        hours: int = 24,
+    ) -> Any:
+        """
+        Register the retention GC as a recurring job on *scheduler*.
+
+        Accepts a :class:`harvest_ui.api.job_scheduler.JobScheduler` instance
+        and registers an :class:`IntervalTrigger` that fires every *hours* hours.
+
+        Args:
+            scheduler: A ``JobScheduler`` instance with a ``schedule_job()`` method.
+            job_id:    Unique identifier for the scheduled job (default: "retention-gc").
+            hours:     Recurrence interval in hours (default: 24).
+
+        Returns:
+            The :class:`ScheduledJob` returned by ``scheduler.schedule_job()``.
+        """
+        try:
+            from harvest_ui.api.job_scheduler import IntervalTrigger
+        except ImportError as exc:  # pragma: no cover
+            raise RuntimeError(
+                "harvest_ui.api.job_scheduler is required for wire_to_cron(). "
+                "Ensure harvest_ui is installed."
+            ) from exc
+
+        trigger = IntervalTrigger(hours=hours)
+
+        def _run_gc() -> None:
+            import asyncio
+            loop = asyncio.new_event_loop()
+            try:
+                loop.run_until_complete(self.run_once())
+            finally:
+                loop.close()
+
+        return scheduler.schedule_job(job_id, _run_gc, trigger)
+
     @property
     def total_expired(self) -> int:
         return self._total_expired

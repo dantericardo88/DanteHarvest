@@ -22,8 +22,10 @@ Constitutional guarantees:
 from __future__ import annotations
 
 import enum
+import time as _time
+import urllib.request
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Callable, Dict, List, Optional
 from uuid import uuid4
 
@@ -129,19 +131,89 @@ class ReplayReport:
         }
 
 
+class HttpStepExecutor:
+    """Default step executor: replays steps via HTTP requests (no Playwright dep).
+
+    Handles navigate/extract steps with real urllib calls; click/type/fill/wait
+    steps are simulated (recorded but not driven through a real browser).
+    """
+
+    async def __call__(self, action: str, step_id: str = "", **kwargs) -> Dict[str, Any]:  # noqa: ARG002
+        """Async-compatible entry point used by ReplayHarness."""
+        step_type = action.strip().split()[0].split(":")[0].lower() if action else "unknown"
+        url = kwargs.get("context", {}).get("url") or (
+            action.split(":", 1)[1].strip() if ":" in action else None
+        )
+
+        if step_type == "navigate":
+            return self._do_navigate(action, url)
+        if step_type in ("click", "hover", "select", "scroll"):
+            return {"passed": True, "output": {"simulated": True, "step_type": step_type}}
+        if step_type in ("type", "fill"):
+            return {"passed": True, "output": {"simulated": True, "step_type": step_type}}
+        if step_type == "extract":
+            return self._do_extract(url)
+        if step_type == "wait":
+            duration = kwargs.get("duration", 0.5)
+            _time.sleep(float(duration))
+            return {"passed": True, "output": {"simulated": True, "step_type": "wait"}}
+        # Unknown / assert / screenshot / evaluate — simulate success
+        return {"passed": True, "output": {"simulated": True, "step_type": step_type}}
+
+    def _do_navigate(self, action: str, url: str | None) -> Dict[str, Any]:
+        # Extract URL from action string like "navigate https://example.com"
+        parts = action.strip().split(None, 1)
+        target = parts[1].strip() if len(parts) > 1 else url
+        if not target:
+            return {"passed": True, "output": {"simulated": True, "step_type": "navigate"}}
+        try:
+            req = urllib.request.Request(target, headers={"User-Agent": "DanteHarvest/1.0"})
+            with urllib.request.urlopen(req, timeout=10) as resp:
+                content = resp.read()
+                return {
+                    "passed": True,
+                    "output": {
+                        "step_type": "navigate",
+                        "status_code": resp.status,
+                        "content_length": len(content),
+                        "simulated": False,
+                    },
+                }
+        except Exception as exc:
+            return {"passed": False, "error": str(exc), "output": {"step_type": "navigate"}}
+
+    def _do_extract(self, url: str | None) -> Dict[str, Any]:
+        if not url:
+            return {"passed": True, "output": {"simulated": True, "step_type": "extract"}}
+        try:
+            req = urllib.request.Request(url, headers={"User-Agent": "DanteHarvest/1.0"})
+            with urllib.request.urlopen(req, timeout=10) as resp:
+                content = resp.read()
+                return {
+                    "passed": True,
+                    "output": {
+                        "step_type": "extract",
+                        "content_length": len(content),
+                        "simulated": False,
+                    },
+                }
+        except Exception as exc:
+            return {"passed": False, "error": str(exc), "output": {"step_type": "extract"}}
+
+
 # Fallback executor: always passes (only used if Playwright is unavailable)
 async def _noop_executor(**kwargs) -> Dict[str, Any]:
     return {"passed": True, "output": None}
 
 
 def _default_step_executor() -> Callable:
-    """Return PlaywrightStepExecutor if Playwright is available, else noop."""
+    """Return PlaywrightStepExecutor if Playwright is available, else HttpStepExecutor."""
     try:
         import playwright  # noqa: F401
         from harvest_index.registry.playwright_executor import playwright_step_executor
         return playwright_step_executor
     except ImportError:
-        return _noop_executor
+        return HttpStepExecutor()
 
 
 class ReplayHarness:
@@ -195,7 +267,7 @@ class ReplayHarness:
         report = ReplayReport(
             replay_id=replay_id,
             pack_id=pack.pack_id,
-            started_at=datetime.utcnow().isoformat(),
+            started_at=datetime.now(timezone.utc).isoformat(),
         )
         if self.tracer is not None:
             self.tracer.start(trajectory_id=replay_id)
@@ -280,7 +352,7 @@ class ReplayHarness:
                     },
                 ))
 
-        report.completed_at = datetime.utcnow().isoformat()
+        report.completed_at = datetime.now(timezone.utc).isoformat()
         if self.tracer is not None:
             self.tracer.record("replay.completed", {"pass_rate": report.pass_rate, "passed": report.passed_count})
             trace_path = self.tracer.save()

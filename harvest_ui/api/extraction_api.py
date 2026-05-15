@@ -35,6 +35,7 @@ except ImportError:
     _FASTAPI = False
 
 from harvest_ui.api.job_store import JobStore
+from harvest_ui.extraction.html_pattern_extractor import HTMLPatternExtractor
 
 
 # ---------------------------------------------------------------------------
@@ -120,9 +121,14 @@ async def _run_extract(job_id: str, req_data: dict, store: JobStore) -> None:
 
 def _rule_based_extract(markdown: str, schema_prompt: str) -> Dict[str, Any]:
     import re as _re
+
+    # --- Primary path: HTML-aware structural extraction ---
+    html_result = HTMLPatternExtractor().extract(markdown, schema_hint=schema_prompt)
+
     prompt_lower = schema_prompt.lower()
     result: Dict[str, Any] = {}
 
+    # --- Fallback regex path (operates on raw content) ---
     if any(k in prompt_lower for k in ("price", "product", "sku", "ecommerce")):
         price_m = _re.search(r"\$\s*(\d+(?:\.\d{2})?)", markdown)
         if price_m:
@@ -164,8 +170,15 @@ def _rule_based_extract(markdown: str, schema_prompt: str) -> Dict[str, Any]:
         if key not in result and len(key) <= 40:
             result[key] = val
 
-    result["_extraction_mode"] = "rule_based"
-    return result
+    # Merge: HTML-aware results take priority over plain-regex results
+    merged: Dict[str, Any] = {}
+    merged.update(result)          # regex results as base
+    for k, v in html_result.items():  # HTML extractor overwrites if non-empty
+        if v is not None and v != "" and v != [] and v != {}:
+            merged[k] = v
+
+    merged["_extraction_mode"] = "rule_based"
+    return merged
 
 
 async def _llm_extract(markdown: str, schema_prompt: Optional[str]) -> Dict[str, Any]:

@@ -12,6 +12,8 @@ Components:
 - DemoRecording: sequence of events with metadata
 - DemoRecorder: records events imperatively or from Playwright CDPSession
 - DemoToPackConverter: converts DemoRecording → WorkflowPack
+- InteractionEvent: raw CDP-level interaction event
+- CDPInteractionRecorder: captures real mouse/keyboard/scroll events via JS injection
 
 Constitutional guarantees:
 - Local-first: recordings saved to local JSON, no cloud upload
@@ -144,6 +146,7 @@ class DemoRecorder:
         self._screenshot_dir = Path(screenshot_dir) if screenshot_dir else None
         self._running = False
         self._shot_index = 0
+        self._cdp_recorder: Optional[Any] = None  # set by start_interaction_recording
 
     def start(self) -> str:
         self._recording.started_at = time.time()
@@ -220,6 +223,144 @@ class DemoRecorder:
                 self.record_navigate(request.url, annotation="auto-captured navigation")
 
         page.on("request", on_request)
+
+    # ------------------------------------------------------------------
+    # CDPInteractionRecorder integration
+    # ------------------------------------------------------------------
+
+    async def start_interaction_recording(self, page: Any) -> "CDPInteractionRecorder":
+        """Create and attach a CDPInteractionRecorder to the given page.
+
+        Injects JavaScript event listeners for click, keydown, input, change,
+        submit, and scroll events. Call stop_interaction_recording() when done.
+        """
+        self._cdp_recorder: Optional["CDPInteractionRecorder"] = CDPInteractionRecorder(
+            page=page,
+            session_id=self._recording.recording_id,
+        )
+        await self._cdp_recorder.attach()
+        return self._cdp_recorder
+
+    async def stop_interaction_recording(self) -> List["InteractionEvent"]:
+        """Detach the CDPInteractionRecorder and return all captured events."""
+        if self._cdp_recorder is None:
+            return []
+        events = await self._cdp_recorder.detach()
+        self._cdp_recorder = None
+        return events
+
+    @staticmethod
+    def interaction_events_to_steps(events: List["InteractionEvent"]) -> List[Dict[str, Any]]:
+        """Convert a list of InteractionEvents to workflow step dicts.
+
+        Rules:
+        - navigate → type='navigate', url
+        - click    → type='click', selector
+        - keydown with key='Enter' on a form context → type='submit', selector
+        - keydown  → type='keydown', key, selector
+        - input/change: consecutive events on the same selector are collapsed
+                        into a single type='type' step with the final value
+        - submit   → type='submit', selector (form action)
+        - scroll: consecutive scroll events are collapsed into one step
+                  (last scrollY wins)
+        """
+        steps: List[Dict[str, Any]] = []
+        i = 0
+        while i < len(events):
+            ev = events[i]
+
+            # Collapse consecutive scroll events
+            if ev.event_type == "scroll":
+                last_scroll = ev
+                j = i + 1
+                while j < len(events) and events[j].event_type == "scroll":
+                    last_scroll = events[j]
+                    j += 1
+                steps.append({
+                    "type": "scroll",
+                    "selector": last_scroll.selector,
+                    "scrollX": last_scroll.x,
+                    "scrollY": last_scroll.y,
+                    "ts": last_scroll.ts,
+                    "session_id": last_scroll.session_id,
+                })
+                i = j
+                continue
+
+            # Collapse consecutive input/change events on the same selector
+            if ev.event_type in ("input", "change"):
+                last_input = ev
+                j = i + 1
+                while j < len(events) and events[j].event_type in ("input", "change") \
+                        and events[j].selector == ev.selector:
+                    last_input = events[j]
+                    j += 1
+                steps.append({
+                    "type": "type",
+                    "selector": last_input.selector,
+                    "value": last_input.value,
+                    "ts": last_input.ts,
+                    "session_id": last_input.session_id,
+                })
+                i = j
+                continue
+
+            # Enter keydown → treat as submit
+            if ev.event_type == "keydown" and ev.key == "Enter":
+                steps.append({
+                    "type": "submit",
+                    "selector": ev.selector,
+                    "key": ev.key,
+                    "ts": ev.ts,
+                    "session_id": ev.session_id,
+                })
+                i += 1
+                continue
+
+            if ev.event_type == "navigate":
+                steps.append({
+                    "type": "navigate",
+                    "url": ev.url,
+                    "ts": ev.ts,
+                    "session_id": ev.session_id,
+                })
+            elif ev.event_type == "click":
+                steps.append({
+                    "type": "click",
+                    "selector": ev.selector,
+                    "text": ev.text,
+                    "x": ev.x,
+                    "y": ev.y,
+                    "ts": ev.ts,
+                    "session_id": ev.session_id,
+                })
+            elif ev.event_type == "submit":
+                steps.append({
+                    "type": "submit",
+                    "selector": ev.selector,
+                    "url": ev.url,
+                    "ts": ev.ts,
+                    "session_id": ev.session_id,
+                })
+            elif ev.event_type == "keydown":
+                steps.append({
+                    "type": "keydown",
+                    "selector": ev.selector,
+                    "key": ev.key,
+                    "ts": ev.ts,
+                    "session_id": ev.session_id,
+                })
+            else:
+                # pass-through for any other event types
+                steps.append({
+                    "type": ev.event_type,
+                    "selector": ev.selector,
+                    "ts": ev.ts,
+                    "session_id": ev.session_id,
+                })
+            i += 1
+
+        return steps
 
     # ------------------------------------------------------------------
     # Persistence
@@ -323,3 +464,231 @@ class DemoToPackConverter:
         if t == DemoEventType.ASSERT.value:
             return f"assert:{event.selector or ''}={event.value or ''}"
         return t
+
+
+# ---------------------------------------------------------------------------
+# InteractionEvent — raw CDP-level event captured by CDPInteractionRecorder
+# ---------------------------------------------------------------------------
+
+@dataclass
+class InteractionEvent:
+    """A single raw browser interaction event captured via JS injection.
+
+    Fields
+    ------
+    event_type : str
+        One of: click, keydown, input, change, submit, scroll, navigate
+    selector : str
+        Best-guess CSS selector for the target element (id > class > tag).
+    text : str
+        Button/link text or empty string.
+    x : Optional[float]
+        Viewport X coordinate (click events only).
+    y : Optional[float]
+        Viewport Y coordinate (click events only).
+    key : Optional[str]
+        Key name (keydown events only, e.g. 'Enter', 'a').
+    value : Optional[str]
+        Current input value (input/change events only).
+    url : Optional[str]
+        Page URL at event time (navigate events) or form action (submit).
+    ts : float
+        Unix timestamp (seconds, from JS Date.now()/1000).
+    session_id : str
+        Recording session identifier.
+    """
+    event_type: str
+    selector: str = ""
+    text: str = ""
+    x: Optional[float] = None
+    y: Optional[float] = None
+    key: Optional[str] = None
+    value: Optional[str] = None
+    url: Optional[str] = None
+    ts: float = field(default_factory=time.time)
+    session_id: str = ""
+
+    @classmethod
+    def from_raw(cls, raw: Dict[str, Any], session_id: str) -> "InteractionEvent":
+        """Build an InteractionEvent from a raw JS event dict."""
+        return cls(
+            event_type=raw.get("type", "unknown"),
+            selector=raw.get("selector", ""),
+            text=raw.get("text", ""),
+            x=raw.get("x"),
+            y=raw.get("y"),
+            key=raw.get("key"),
+            value=raw.get("value"),
+            url=raw.get("url") or raw.get("action"),
+            ts=raw.get("ts", time.time()),
+            session_id=session_id,
+        )
+
+
+# ---------------------------------------------------------------------------
+# CDPInteractionRecorder — JS-injection based real interaction capture
+# ---------------------------------------------------------------------------
+
+# JavaScript injected into the page to capture real user interactions.
+# Uses a global window.__harvestEvents array that we poll via page.evaluate().
+_INJECT_SCRIPT = """
+(function() {
+  if (window.__harvestListenersAttached) return;
+  window.__harvestListenersAttached = true;
+  window.__harvestEvents = window.__harvestEvents || [];
+
+  function bestSelector(el) {
+    if (!el) return '';
+    if (el.id) return '#' + el.id;
+    var cls = Array.prototype.slice.call(el.classList || []).slice(0, 2).join('.');
+    if (cls) return el.tagName.toLowerCase() + '.' + cls;
+    return el.tagName.toLowerCase();
+  }
+
+  document.addEventListener('click', function(e) {
+    window.__harvestEvents.push({
+      type: 'click',
+      x: e.clientX,
+      y: e.clientY,
+      selector: bestSelector(e.target),
+      text: (e.target.innerText || e.target.value || '').slice(0, 200),
+      ts: Date.now() / 1000
+    });
+  }, true);
+
+  document.addEventListener('keydown', function(e) {
+    window.__harvestEvents.push({
+      type: 'keydown',
+      key: e.key,
+      selector: bestSelector(e.target),
+      ts: Date.now() / 1000
+    });
+  }, true);
+
+  document.addEventListener('input', function(e) {
+    window.__harvestEvents.push({
+      type: 'input',
+      value: (e.target.value || '').slice(0, 1000),
+      selector: bestSelector(e.target),
+      ts: Date.now() / 1000
+    });
+  }, true);
+
+  document.addEventListener('change', function(e) {
+    window.__harvestEvents.push({
+      type: 'change',
+      value: (e.target.value || '').slice(0, 1000),
+      selector: bestSelector(e.target),
+      ts: Date.now() / 1000
+    });
+  }, true);
+
+  document.addEventListener('submit', function(e) {
+    var form = e.target;
+    window.__harvestEvents.push({
+      type: 'submit',
+      selector: bestSelector(form),
+      action: form.action || '',
+      method: form.method || 'get',
+      ts: Date.now() / 1000
+    });
+  }, true);
+
+  var _lastScrollTs = 0;
+  document.addEventListener('scroll', function(e) {
+    var now = Date.now() / 1000;
+    if (now - _lastScrollTs < 1.0) return;  // throttle: max 1/sec
+    _lastScrollTs = now;
+    window.__harvestEvents.push({
+      type: 'scroll',
+      scrollX: window.scrollX,
+      scrollY: window.scrollY,
+      selector: '',
+      ts: now
+    });
+  }, true);
+})();
+"""
+
+# Script that reads and clears the event buffer
+_POLL_SCRIPT = """
+(function() {
+  var evts = window.__harvestEvents || [];
+  window.__harvestEvents = [];
+  return evts;
+})();
+"""
+
+# Script that removes all listeners (sets the guard flag to prevent re-attach)
+_DETACH_SCRIPT = """
+(function() {
+  window.__harvestListenersAttached = false;
+  var evts = window.__harvestEvents || [];
+  window.__harvestEvents = [];
+  return evts;
+})();
+"""
+
+
+class CDPInteractionRecorder:
+    """Records real CDP-level mouse/keyboard/scroll events from a Playwright page.
+
+    Attaches JavaScript listeners directly to the page via page.evaluate()
+    so we capture real DOM events without requiring raw CDP protocol access.
+
+    Usage::
+
+        recorder = CDPInteractionRecorder(page=playwright_page, session_id="s1")
+        await recorder.attach()
+        # ... user interacts ...
+        # call poll() periodically to drain the buffer
+        events = await recorder.poll()
+        # when done:
+        all_events = await recorder.detach()
+
+    When *page* is ``None`` (e.g. in unit tests without a browser),
+    ``attach()`` raises ``RuntimeError`` rather than crashing silently.
+    """
+
+    def __init__(self, page: Any, session_id: str) -> None:
+        self._page = page
+        self._session_id = session_id
+        self._events: List[InteractionEvent] = []
+
+    async def attach(self) -> None:
+        """Inject JavaScript event listeners into the page.
+
+        Raises RuntimeError if no page is attached.
+        """
+        if self._page is None:
+            raise RuntimeError("No page attached — cannot inject event listeners")
+        await self._page.evaluate(_INJECT_SCRIPT)
+
+    async def poll(self) -> List[InteractionEvent]:
+        """Read and clear window.__harvestEvents from the page.
+
+        Returns new InteractionEvent objects since last poll.
+        Raises RuntimeError if no page is attached.
+        """
+        if self._page is None:
+            raise RuntimeError("No page attached — cannot poll events")
+        raw_events: List[Dict[str, Any]] = await self._page.evaluate(_POLL_SCRIPT)
+        new_events = [InteractionEvent.from_raw(r, self._session_id) for r in (raw_events or [])]
+        self._events.extend(new_events)
+        return new_events
+
+    async def detach(self) -> List[InteractionEvent]:
+        """Final poll + remove listeners. Returns all recorded events.
+
+        Raises RuntimeError if no page is attached.
+        """
+        if self._page is None:
+            raise RuntimeError("No page attached — cannot detach event listeners")
+        raw_events: List[Dict[str, Any]] = await self._page.evaluate(_DETACH_SCRIPT)
+        final_events = [InteractionEvent.from_raw(r, self._session_id) for r in (raw_events or [])]
+        self._events.extend(final_events)
+        return list(self._events)
+
+    def get_events(self) -> List[InteractionEvent]:
+        """Return all recorded events accumulated so far (without polling)."""
+        return list(self._events)

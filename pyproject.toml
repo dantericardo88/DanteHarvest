@@ -16,6 +16,8 @@ dependencies = [
     "opencv-python-headless>=4.9",
     "markitdown>=0.0.1",
     "asyncio-mqtt>=0.16",
+    "imageio>=2.34",
+    "imageio-ffmpeg>=0.4.9",
 ]
 
 [project.scripts]

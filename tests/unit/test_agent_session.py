@@ -287,10 +287,13 @@ def test_heuristic_plan_click_intent():
 
 
 def test_heuristic_plan_type_intent():
+    # The planner now emits click-to-focus + type as a pair; assert the type
+    # action is present anywhere in the plan with the correct text value.
     actions = _heuristic_plan('type "hello world" into the search box', "", "")
     assert len(actions) >= 1
-    assert actions[0]["type"] == "type"
-    assert actions[0]["value"] == "hello world"
+    type_action = next((a for a in actions if a["type"] == "type"), None)
+    assert type_action is not None, f"No type action in plan: {actions}"
+    assert type_action["value"] == "hello world"
 
 
 def test_heuristic_plan_scroll_intent():

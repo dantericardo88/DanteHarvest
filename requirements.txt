@@ -1,0 +1,11 @@
+# Core runtime dependencies (mirrors pyproject.toml [project.dependencies])
+pydantic>=2.6
+httpx>=0.27
+playwright>=1.43
+pytesseract>=0.3.10
+Pillow>=10.0.0
+opencv-python-headless>=4.9
+markitdown>=0.0.1
+asyncio-mqtt>=0.16
+imageio>=2.34.0
+imageio-ffmpeg>=0.4.9

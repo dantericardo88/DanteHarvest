@@ -29,6 +29,7 @@ class SlackConnector(BaseConnector):
     """
 
     connector_name = "slack"
+    required_env_vars = ["SLACK_BOT_TOKEN", "SLACK_TOKEN"]
 
     def __init__(self, token: Optional[str] = None, storage_root: str = "storage"):
         super().__init__(storage_root)

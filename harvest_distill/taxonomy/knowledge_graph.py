@@ -27,6 +27,19 @@ from pathlib import Path
 from typing import Any, Dict, Iterator, List, Optional, Set, Tuple
 from uuid import uuid4
 
+# Lazy import to avoid circular-import issues and keep the dependency optional
+# at import time (extractor is only created on first use).
+_NLPTripleExtractor = None
+
+
+def _get_extractor():
+    """Return a module-level singleton NLPTripleExtractor (lazy init)."""
+    global _NLPTripleExtractor
+    if _NLPTripleExtractor is None:
+        from harvest_distill.taxonomy.nlp_triple_extractor import NLPTripleExtractor
+        _NLPTripleExtractor = NLPTripleExtractor()
+    return _NLPTripleExtractor
+
 
 # ---------------------------------------------------------------------------
 # Entity + Relation
@@ -84,6 +97,15 @@ class KnowledgeGraph:
         self._conn = sqlite3.connect(str(self._db_path), check_same_thread=False)
         self._init_schema()
         self._entity_cache: Dict[str, Entity] = {}
+        self._extractor = None  # lazy-initialised NLPTripleExtractor
+
+    @property
+    def extractor(self):
+        """Lazy-initialised NLPTripleExtractor (created on first access)."""
+        if self._extractor is None:
+            from harvest_distill.taxonomy.nlp_triple_extractor import NLPTripleExtractor
+            self._extractor = NLPTripleExtractor()
+        return self._extractor
 
     def _init_schema(self) -> None:
         cur = self._conn.cursor()
@@ -319,6 +341,90 @@ class KnowledgeGraph:
                 f"MERGE (s)-[:{safe_pred}]->(o);"
             )
         return "\n".join(lines)
+
+    # ------------------------------------------------------------------
+    # Automated NLP extraction (new in wave 7f)
+    # ------------------------------------------------------------------
+
+    def add_from_text(self, text: str, source_id: str = "") -> int:
+        """
+        Extract triples from plain text via NLPTripleExtractor and add them.
+
+        Args:
+            text:      Plain-text content to extract from.
+            source_id: Optional provenance tag stored on each Relation.
+
+        Returns:
+            Number of triples successfully added.
+        """
+        triples = self.extractor.extract_triples(text)
+        added = 0
+        for t in triples:
+            try:
+                self.add_triple(
+                    subject=t.subject,
+                    predicate=t.predicate,
+                    obj=t.object_,
+                    confidence=t.confidence,
+                    source=source_id or t.source_text[:120],
+                )
+                added += 1
+            except Exception:
+                pass
+        return added
+
+    def add_from_markdown(self, markdown: str, source_id: str = "") -> int:
+        """
+        Extract triples from markdown text via NLPTripleExtractor and add them.
+
+        Also handles definition lists, bullet key-value pairs, and header
+        context (see NLPTripleExtractor.extract_from_markdown).
+
+        Args:
+            markdown:  Markdown-formatted text.
+            source_id: Optional provenance tag stored on each Relation.
+
+        Returns:
+            Number of triples successfully added.
+        """
+        triples = self.extractor.extract_from_markdown(markdown)
+        added = 0
+        for t in triples:
+            try:
+                self.add_triple(
+                    subject=t.subject,
+                    predicate=t.predicate,
+                    obj=t.object_,
+                    confidence=t.confidence,
+                    source=source_id or t.source_text[:120],
+                )
+                added += 1
+            except Exception:
+                pass
+        return added
+
+    def add_from_documents(self, docs: List[dict], text_field: str = "text") -> int:
+        """
+        Batch-extract triples from a list of document dicts.
+
+        Each doc must have a key matching `text_field` (default: "text").
+        The doc's "id" or "source" key (if present) is used as source_id.
+
+        Args:
+            docs:       List of dicts, each containing at least `text_field`.
+            text_field: Key whose value holds the document text.
+
+        Returns:
+            Total number of triples added across all documents.
+        """
+        total = 0
+        for doc in docs:
+            text = doc.get(text_field, "")
+            if not text:
+                continue
+            source_id = str(doc.get("id", doc.get("source", "")))
+            total += self.add_from_text(text, source_id=source_id)
+        return total
 
     def close(self) -> None:
         try:

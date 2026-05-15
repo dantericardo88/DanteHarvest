@@ -21,10 +21,60 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass, field
-from typing import List, Optional, Set, Tuple
+from typing import Dict, List, Optional, Set, Tuple
 
 from harvest_core.control.exceptions import NormalizationError
 from harvest_core.rights.redaction_scanner import RedactionScanner, ScanResult
+
+
+# ---------------------------------------------------------------------------
+# Structured redaction reporting
+# ---------------------------------------------------------------------------
+
+@dataclass
+class RedactionMatch:
+    """One individual redaction substitution."""
+    pattern_name: str    # e.g. "email_address", "aws_access_key", "PERSON"
+    matched_text: str    # the actual matched string (pre-redaction)
+    start: int           # character offset in original text
+    end: int             # character offset in original text (exclusive)
+    confidence: float    # 1.0 for regex matches, 0.0–1.0 for NER entities
+    replacement: str     # what it was replaced with, e.g. "[EMAIL]"
+
+
+@dataclass
+class RedactionReport:
+    """Aggregate report for a single redact_with_report() call."""
+    original_length: int
+    redacted_length: int
+    matches: List[RedactionMatch] = field(default_factory=list)
+
+    @property
+    def patterns_triggered(self) -> List[str]:
+        """Unique list of pattern names that fired, in first-seen order."""
+        seen: Dict[str, None] = {}
+        for m in self.matches:
+            seen.setdefault(m.pattern_name, None)
+        return list(seen.keys())
+
+    @property
+    def redaction_rate(self) -> float:
+        """Fraction of characters in the original that were redacted (0.0–1.0)."""
+        if self.original_length == 0:
+            return 0.0
+        chars_redacted = sum(m.end - m.start for m in self.matches)
+        return min(1.0, chars_redacted / self.original_length)
+
+    def summary(self) -> str:
+        """Human-readable one-liner, e.g. 'Redacted 3 items: email_address(1), phone(1), ssn(1)'."""
+        if not self.matches:
+            return "No redactions — text is clean"
+        counts: Dict[str, int] = {}
+        for m in self.matches:
+            counts[m.pattern_name] = counts.get(m.pattern_name, 0) + 1
+        detail = ", ".join(f"{name}({n})" for name, n in counts.items())
+        total = len(self.matches)
+        return f"Redacted {total} item{'s' if total != 1 else ''}: {detail}"
 
 
 # NER entity types treated as PII when found in personal context
@@ -227,6 +277,68 @@ class NERRedactor:
     def redact_with_result(self, text: str) -> "NERRedactorResult":
         """Scan and return the NERRedactorResult (used by PresidioRedactor fallback)."""
         return self.scan(text)
+
+    def redact_with_report(self, text: str) -> Tuple[str, RedactionReport]:
+        """
+        Redact all PII/secrets and return (redacted_text, RedactionReport).
+
+        The report captures every individual substitution made — pattern name,
+        original matched text, offsets, confidence, and replacement token.
+        Works whether or not spaCy is available (regex path always fires).
+        """
+        scan_result = self.scan(text)
+
+        # Collect (start, end, pattern_name, matched_text, confidence, replacement) tuples
+        raw_matches: List[Tuple[int, int, str, str, float, str]] = []
+
+        for f in scan_result.regex_result.findings:
+            label = f"[{f.pattern_name.upper()}]"
+            raw_matches.append((f.match_start, f.match_end, f.pattern_name,
+                                 text[f.match_start:f.match_end], 1.0, label))
+
+        for f in scan_result.ner_findings:
+            if f.context_pii or f.entity_type in _ALWAYS_REDACT:
+                label = f"[{f.entity_type}]"
+                raw_matches.append((f.start, f.end, f.entity_type,
+                                    f.text, f.confidence, label))
+
+        # Merge overlapping intervals (keep the first label encountered)
+        raw_matches.sort(key=lambda x: x[0])
+        merged_intervals: List[Tuple[int, int, str, str, float, str]] = []
+        for item in raw_matches:
+            start, end, name, matched, conf, label = item
+            if merged_intervals and start < merged_intervals[-1][1]:
+                prev = merged_intervals[-1]
+                merged_intervals[-1] = (prev[0], max(prev[1], end),
+                                        prev[2], prev[3], prev[4], prev[5])
+            else:
+                merged_intervals.append(item)
+
+        # Build report matches before text mutation
+        report_matches = [
+            RedactionMatch(
+                pattern_name=name,
+                matched_text=matched,
+                start=start,
+                end=end,
+                confidence=conf,
+                replacement=label,
+            )
+            for start, end, name, matched, conf, label in merged_intervals
+        ]
+
+        # Apply right-to-left
+        chars = list(text)
+        for start, end, _name, _matched, _conf, label in reversed(merged_intervals):
+            chars[start:end] = list(label)
+        redacted = "".join(chars)
+
+        report = RedactionReport(
+            original_length=len(text),
+            redacted_length=len(redacted),
+            matches=report_matches,
+        )
+        return redacted, report
 
     def redact_file(self, path, replacement: str = "[REDACTED]") -> str:
         """Read a text file, redact PII, return redacted text."""

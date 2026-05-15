@@ -306,5 +306,33 @@
       "causalCoherence": 20
     },
     "penaltyTotal": 15
+  },
+  {
+    "timestamp": "2026-05-15T14:15:27.270Z",
+    "harshScore": 48,
+    "displayScore": 4.8,
+    "dimensions": {
+      "functionality": 100,
+      "testing": 55,
+      "errorHandling": 50,
+      "security": 70,
+      "uxPolish": 50,
+      "documentation": 100,
+      "performance": 70,
+      "maintainability": 90,
+      "planningQuality": 96,
+      "selfImprovement": 65,
+      "developerExperience": 100,
+      "autonomy": 45,
+      "specDrivenPipeline": 95,
+      "convergenceSelfHealing": 45,
+      "tokenEconomy": 75,
+      "contextEconomy": 0,
+      "ecosystemMcp": 40,
+      "enterpriseReadiness": 60,
+      "communityAdoption": 15,
+      "causalCoherence": 20
+    },
+    "penaltyTotal": 20
   }
 ]

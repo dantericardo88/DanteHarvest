@@ -26,6 +26,9 @@ _PATTERNS: dict[str, re.Pattern] = {
     # Credentials and secrets
     "aws_access_key": re.compile(r"AKIA[0-9A-Z]{16}", re.ASCII),
     "aws_secret_key": re.compile(r"(?i)aws.{0,20}secret.{0,20}['\"][0-9a-zA-Z/+]{40}['\"]"),
+    "azure_connection_string": re.compile(
+        r"DefaultEndpointsProtocol=https;AccountName=[^;]{1,63};AccountKey=[A-Za-z0-9+/]{86}==;[^\s\"']{0,200}"
+    ),
     "github_token": re.compile(r"ghp_[0-9a-zA-Z]{36}", re.ASCII),
     "github_oauth": re.compile(r"gho_[0-9a-zA-Z]{36}", re.ASCII),
     "slack_token": re.compile(r"xox[baprs]-[0-9a-zA-Z\-]+"),
@@ -45,6 +48,10 @@ _PATTERNS: dict[str, re.Pattern] = {
     "npm_token": re.compile(r"npm_[a-zA-Z0-9]{36}"),
     "discord_token": re.compile(r"[MN][a-zA-Z0-9]{23}\.[a-zA-Z0-9\-_]{6}\.[a-zA-Z0-9\-_]{27}"),
 
+    # Crypto / blockchain secrets
+    "bitcoin_address": re.compile(r"\b[13][a-km-zA-HJ-NP-Z1-9]{25,34}\b"),
+    "ethereum_address": re.compile(r"\b0x[a-fA-F0-9]{40}\b"),
+
     # PII
     "email_address": re.compile(
         r"\b[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}\b"
@@ -56,12 +63,25 @@ _PATTERNS: dict[str, re.Pattern] = {
     "credit_card": re.compile(
         r"\b(?:4[0-9]{12}(?:[0-9]{3})?|5[1-5][0-9]{14}|3[47][0-9]{13}|6011[0-9]{12})\b"
     ),
+    # Public IPv4 only — private ranges (10.x, 172.16-31.x, 192.168.x) excluded via negative lookahead
+    "ipv4_public": re.compile(
+        r"\b(?!10\.\d{1,3}\.\d{1,3}\.\d{1,3}\b)"
+        r"(?!172\.(?:1[6-9]|2\d|3[01])\.\d{1,3}\.\d{1,3}\b)"
+        r"(?!192\.168\.\d{1,3}\.\d{1,3}\b)"
+        r"(?!127\.0\.0\.1\b)"
+        r"(?:(?:25[0-5]|2[0-4]\d|[01]?\d\d?)\.){3}(?:25[0-5]|2[0-4]\d|[01]?\d\d?)\b"
+    ),
     "ip_address_private": re.compile(
         r"\b(10\.\d{1,3}\.\d{1,3}\.\d{1,3}|172\.(?:1[6-9]|2\d|3[01])\.\d{1,3}\.\d{1,3}|192\.168\.\d{1,3}\.\d{1,3})\b"
+    ),
+    "mac_address": re.compile(r"\b([0-9A-Fa-f]{2}[:\-]){5}([0-9A-Fa-f]{2})\b"),
+    "lat_long_coordinates": re.compile(
+        r"-?\d{1,3}\.\d{4,},\s*-?\d{1,3}\.\d{4,}"
     ),
     "uk_nino": re.compile(r"\b[A-Z]{2}\s?\d{2}\s?\d{2}\s?\d{2}\s?[A-D]\b"),
     "iban": re.compile(r"\b[A-Z]{2}\d{2}[A-Z0-9]{4}\d{7}(?:[A-Z0-9]?){0,16}\b"),
     "passport_number": re.compile(r"\b[A-Z]{1,2}\d{6,9}\b"),
+    "us_drivers_license": re.compile(r"\b[A-Z]\d{7}\b"),
     "date_of_birth": re.compile(r"(?i)\b(?:dob|date\s+of\s+birth)[:\s]+\d{1,2}[/-]\d{1,2}[/-]\d{2,4}\b"),
     "medical_record": re.compile(r"(?i)\bMRN[:\s]+\d{5,10}\b"),
     "vehicle_vin": re.compile(r"\b[A-HJ-NPR-Z0-9]{17}\b"),
@@ -71,9 +91,11 @@ _PATTERNS: dict[str, re.Pattern] = {
 _PII_PATTERNS = {
     "email_address", "us_phone", "us_ssn", "credit_card",
     "uk_nino", "iban", "passport_number", "date_of_birth", "medical_record", "vehicle_vin",
+    "ipv4_public", "mac_address", "lat_long_coordinates", "us_drivers_license",
+    # ip_address_private is informational — private IPs are not redacted by default
 }
 # Credential patterns that always require redaction
-_SECRET_PATTERNS = set(_PATTERNS.keys()) - _PII_PATTERNS
+_SECRET_PATTERNS = set(_PATTERNS.keys()) - _PII_PATTERNS - {"ip_address_private"}
 
 
 @dataclass

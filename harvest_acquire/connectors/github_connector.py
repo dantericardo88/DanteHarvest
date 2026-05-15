@@ -25,6 +25,7 @@ from harvest_acquire.connectors.base_connector import BaseConnector, ConnectorEr
 
 class GitHubConnector(BaseConnector):
     connector_name = "github"
+    required_env_vars = ["GITHUB_TOKEN", "GH_TOKEN"]
 
     def __init__(self, token: Optional[str] = None, storage_root: str = "storage"):
         super().__init__(storage_root=storage_root)

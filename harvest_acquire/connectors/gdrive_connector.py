@@ -38,6 +38,7 @@ class GDriveConnector(BaseConnector):
     """
 
     connector_name = "gdrive"
+    required_env_vars = ["GOOGLE_SERVICE_ACCOUNT_JSON", "GDRIVE_TOKEN", "GOOGLE_APPLICATION_CREDENTIALS"]
 
     def __init__(
         self,

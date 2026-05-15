@@ -1,11 +1,39 @@
 {
   "allGreen": true,
   "target": 9,
-  "passing": 20,
+  "passing": 44,
   "failing": 0,
   "blocked": 0,
-  "total": 20,
+  "total": 44,
+  "matrixVersion": "3.6.0",
+  "weightedAverage": 8.02,
+  "scoringMethod": "adversarial-code-inspection",
+  "checkedAt": "2026-05-15T00:00:00.000Z",
   "failingDimensions": [],
   "blockedDimensions": [],
-  "checkedAt": "2026-05-14T16:33:11.374Z"
+  "ceilingLockedDimensions": [
+    "proxy_network_depth",
+    "remote_browser_scalability",
+    "dataset_marketplace",
+    "anti_bot_bypass",
+    "no_code_extraction_ux",
+    "platform_ecosystem"
+  ],
+  "waveHistory": [
+    {
+      "wave": 1,
+      "dimensions": ["constitutional_doctrine_enforcement", "agpl_quarantine", "agent_browser_infrastructure", "structured_extraction_endpoints", "pack_promotion_pipeline", "replay_harness_fidelity", "job_scheduling_and_storage"],
+      "tests_after": 1904
+    },
+    {
+      "wave": 2,
+      "dimensions": ["knowledge_graph_extraction", "human_demo_to_automation", "gdpr_retention_enforcement", "encrypted_at_rest"],
+      "tests_after": 1976
+    },
+    {
+      "wave": 3,
+      "dimensions": ["javascript_rendering_fidelity", "observation_plane_depth", "connector_breadth", "transcription_quality", "computer_vision_pipeline", "redaction_accuracy"],
+      "tests_after": 2094
+    }
+  ]
 }

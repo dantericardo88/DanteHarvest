@@ -314,73 +314,316 @@ async def _fetch_url_playwright(
     return html, status_code
 
 
+def _extract_text_content(html: str) -> str:
+    """
+    Strip all <script>, <style>, and <head> tags and return visible text content.
+    Pure regex, no external deps.
+    """
+    text = re.sub(r"<head[^>]*>.*?</head>", "", html, flags=re.DOTALL | re.IGNORECASE)
+    text = re.sub(r"<script[^>]*>.*?</script>", "", text, flags=re.DOTALL | re.IGNORECASE)
+    text = re.sub(r"<style[^>]*>.*?</style>", "", text, flags=re.DOTALL | re.IGNORECASE)
+    text = re.sub(r"<!--.*?-->", "", text, flags=re.DOTALL)
+    text = re.sub(r"<[^>]+>", " ", text)
+    text = re.sub(r"\s+", " ", text).strip()
+    return text
+
+
+def _extract_preloaded_state(html: str) -> Dict[str, Any]:
+    """
+    Extract common preloaded JS state stores from HTML:
+    window.__PRELOADED_STATE__, window.INITIAL_REDUX_STATE,
+    window.__APOLLO_STATE__, window.__RELAY_STORE__.
+    Returns dict keyed by variable name with raw JSON string as value.
+    """
+    import json
+    result: Dict[str, Any] = {}
+    patterns = [
+        ("__PRELOADED_STATE__", r'(?:window\.)?__PRELOADED_STATE__\s*=\s*(\{.*?\})\s*(?:;|</script>)'),
+        ("INITIAL_REDUX_STATE", r'(?:window\.)?INITIAL_REDUX_STATE\s*=\s*(\{.*?\})\s*(?:;|</script>)'),
+        ("__APOLLO_STATE__", r'(?:window\.)?__APOLLO_STATE__\s*=\s*(\{.*?\})\s*(?:;|</script>)'),
+        ("__RELAY_STORE__", r'(?:window\.)?__RELAY_STORE__\s*=\s*(\{.*?\})\s*(?:;|</script>)'),
+        ("__NEXT_DATA__", r'__NEXT_DATA__\s*=\s*(\{.*?\})\s*(?:;|</script>)'),
+        ("__INITIAL_STATE__", r'(?:window\.)?__INITIAL_STATE__\s*=\s*(\{.*?\})\s*(?:;|</script>)'),
+    ]
+    for key, pattern in patterns:
+        m = re.search(pattern, html, flags=re.DOTALL)
+        if m:
+            raw = m.group(1)[:8192]
+            try:
+                result[key] = json.loads(raw)
+            except Exception:
+                result[key] = raw
+    return result
+
+
+def _extract_inline_data_attrs(html: str) -> Dict[str, Any]:
+    """
+    Extract data-props, data-initial, data-server-props attributes from root div/section
+    elements (common in React/Vue server-side props injection).
+    Returns dict keyed by attribute name with parsed JSON value.
+
+    Uses separate single-quote and double-quote patterns so that JSON payloads
+    containing the other quote type are captured correctly.
+    """
+    import json
+    result: Dict[str, Any] = {}
+    attr_names = ("data-props", "data-initial", "data-server-props", "data-page", "data-hydration")
+    for attr in attr_names:
+        escaped = re.escape(attr)
+        # Single-quoted attribute value: content may contain " freely
+        single = re.compile(rf"{escaped}='([^']*)'", re.IGNORECASE)
+        # Double-quoted attribute value: content may contain ' freely
+        double = re.compile(rf'{escaped}="([^"]*)"', re.IGNORECASE)
+        m = single.search(html) or double.search(html)
+        if m:
+            raw = m.group(1)
+            try:
+                result[attr] = json.loads(raw)
+            except Exception:
+                result[attr] = raw
+    return result
+
+
+def _extract_app_config(html: str) -> Dict[str, Any]:
+    """
+    Extract window.APP_CONFIG, window.appConfig, window.config JS assignments.
+    Returns dict keyed by config name.
+    """
+    import json
+    result: Dict[str, Any] = {}
+    patterns = [
+        ("APP_CONFIG", r'(?:window\.)?APP_CONFIG\s*=\s*(\{.*?\})\s*(?:;|</script>)'),
+        ("appConfig", r'(?:window\.)?appConfig\s*=\s*(\{.*?\})\s*(?:;|</script>)'),
+        ("config", r'window\.config\s*=\s*(\{.*?\})\s*(?:;|</script>)'),
+    ]
+    for key, pattern in patterns:
+        m = re.search(pattern, html, flags=re.DOTALL)
+        if m:
+            raw = m.group(1)[:4096]
+            try:
+                result[key] = json.loads(raw)
+            except Exception:
+                result[key] = raw
+    return result
+
+
+def _detect_csr_only(html: str, text_content: str) -> bool:
+    """
+    Return True if the page appears to be CSR-only (pure client-side rendered).
+    Heuristics:
+    - Visible text content is very short (<1000 chars), AND
+    - The ratio of <script> tag bytes to total body bytes is high (>70%)
+    """
+    text_len = len(text_content)
+    if text_len >= 1000:
+        return False  # substantial server-rendered text, not CSR-only
+
+    # Measure script weight vs total
+    script_content = "".join(
+        re.findall(r"<script[^>]*>(.*?)</script>", html, flags=re.DOTALL | re.IGNORECASE)
+    )
+    total_len = len(html)
+    if total_len == 0:
+        return False
+    script_ratio = len(script_content) / total_len
+    return script_ratio > 0.70
+
+
+def _detect_framework(html: str) -> str:
+    """Detect the JS framework used, returning a short identifier."""
+    sample = html[:8000].lower()
+    if "__next_data__" in sample:
+        return "next"
+    if "_nuxt" in sample or "nuxtjs" in sample:
+        return "nuxt"
+    if "svelte" in sample:
+        return "svelte"
+    if "data-reactroot" in sample or "react" in sample:
+        return "react"
+    if "ng-version" in sample or "angular" in sample:
+        return "angular"
+    if "data-v-" in sample or "vue" in sample or "v-cloak" in sample:
+        return "vue"
+    if "ember" in sample:
+        return "ember"
+    return "ssr-generic"
+
+
+def _extract_meta_tags(html: str) -> Dict[str, str]:
+    """Extract Open Graph and standard meta tags from HTML."""
+    meta: Dict[str, str] = {}
+    for m in re.finditer(
+        r'<meta\s+(?:[^>]*?\s+)?(?:property|name)=["\']([^"\']+)["\'][^>]*content=["\']([^"\']*)["\']',
+        html, flags=re.IGNORECASE,
+    ):
+        meta[m.group(1)] = m.group(2)
+    for m in re.finditer(
+        r'<meta\s+(?:[^>]*?\s+)?content=["\']([^"\']*)["\'][^>]*(?:property|name)=["\']([^"\']+)["\']',
+        html, flags=re.IGNORECASE,
+    ):
+        meta[m.group(2)] = m.group(1)
+    return meta
+
+
 def _fetch_url_spa_enhanced(
     url: str,
     timeout: int = 10,
     proxy_url: Optional[str] = None,
     use_stealth_headers: bool = False,
 ) -> tuple[str, int]:
-    """HTTP fetch with SPA-aware enrichment: extracts embedded JSON blobs, meta tags,
-    JSON-LD, and framework data stores that plain HTTP would otherwise discard."""
-    html, status = _fetch_url(url, timeout=timeout, proxy_url=proxy_url, use_stealth_headers=use_stealth_headers)
-    if status >= 400 or not html:
-        return html, status
+    """
+    HTTP fetch with SPA-aware enrichment.
+
+    Returns a rich string encoding of all extracted data alongside the HTTP status code.
+    The string is backward-compatible with the previous format (text followed by labeled
+    sections) but now also includes:
+    - CSR-only detection with explicit requires_playwright signal
+    - Extended framework state extraction (__PRELOADED_STATE__, __APOLLO_STATE__, __RELAY_STORE__)
+    - Inline data-attribute extraction (data-props, data-server-props, etc.)
+    - App config extraction (window.APP_CONFIG, window.appConfig, window.config)
+    - Visible text content stripped of all script/style/head content
+    - Framework detection (next/nuxt/svelte/react/angular/vue/ssr-generic/csr-only)
+
+    For callers that need the full structured dict, use _fetch_url_spa_enhanced_dict().
+    """
+    result = _fetch_url_spa_enhanced_dict(
+        url, timeout=timeout, proxy_url=proxy_url, use_stealth_headers=use_stealth_headers
+    )
+    status = result["status_code"]
+    if status >= 400 or not result.get("text_content") and not result.get("structured_data"):
+        return result.get("text_content", ""), status
 
     parts: List[str] = []
 
-    # Strip scripts/styles for base text (more aggressive than _html_to_markdown fallback)
-    base = re.sub(r"<script[^>]*>.*?</script>", "", html, flags=re.DOTALL | re.IGNORECASE)
-    base = re.sub(r"<style[^>]*>.*?</style>", "", base, flags=re.DOTALL | re.IGNORECASE)
-    base = re.sub(r"<!--.*?-->", "", base, flags=re.DOTALL)
-    base = re.sub(r"<[^>]+>", " ", base)
-    base = re.sub(r"\s+", " ", base).strip()
-    if base:
-        parts.append(base)
+    # Visible text content
+    if result["text_content"]:
+        parts.append(result["text_content"])
 
-    # JSON-LD blocks
-    for block in re.findall(
-        r'<script[^>]+type=["\']application/ld\+json["\'][^>]*>(.*?)</script>',
-        html, flags=re.DOTALL | re.IGNORECASE,
-    ):
-        block = block.strip()
-        if block:
+    # CSR-only advisory
+    if result["requires_playwright"]:
+        parts.append(
+            f"[SPA_CSR_ONLY] content_type={result['content_type']} "
+            "Client-side rendered — Playwright required for full content"
+        )
+
+    # Structured data: JSON-LD, JSON-DATA, framework stores, app config, inline attrs
+    sd = result["structured_data"]
+    if sd.get("json_ld"):
+        for block in sd["json_ld"]:
             parts.append("JSON-LD: " + block)
-
-    # <script type="application/json"> blocks (non-ld+json)
-    for block in re.findall(
-        r'<script[^>]+type=["\']application/json["\'][^>]*>(.*?)</script>',
-        html, flags=re.DOTALL | re.IGNORECASE,
-    ):
-        block = block.strip()
-        if block:
+    if sd.get("json_data"):
+        for block in sd["json_data"]:
             parts.append("JSON-DATA: " + block)
-
-    # Framework data stores embedded in JS
-    for var, pattern in (
-        ("__NEXT_DATA__", r'__NEXT_DATA__\s*=\s*(\{.*?\})\s*(?:;|</script>)'),
-        ("__INITIAL_STATE__", r'__INITIAL_STATE__\s*=\s*(\{.*?\})\s*(?:;|</script>)'),
-        ("__PRELOADED_STATE__", r'__PRELOADED_STATE__\s*=\s*(\{.*?\})\s*(?:;|</script>)'),
-    ):
-        m = re.search(pattern, html, flags=re.DOTALL)
-        if m:
-            parts.append(f"{var}: " + m.group(1)[:4096])
+    for key in ("__PRELOADED_STATE__", "INITIAL_REDUX_STATE", "__APOLLO_STATE__",
+                "__RELAY_STORE__", "__NEXT_DATA__", "__INITIAL_STATE__"):
+        if key in sd.get("preloaded_state", {}):
+            import json as _json
+            val = sd["preloaded_state"][key]
+            raw = val if isinstance(val, str) else _json.dumps(val)
+            parts.append(f"{key}: " + raw[:4096])
+    if sd.get("app_config"):
+        import json as _json
+        parts.append("APP_CONFIG: " + _json.dumps(sd["app_config"])[:2048])
+    if sd.get("inline_data_attrs"):
+        import json as _json
+        parts.append("DATA_ATTRS: " + _json.dumps(sd["inline_data_attrs"])[:2048])
 
     # Meta tags
-    meta_parts: List[str] = []
-    for m in re.finditer(
-        r'<meta\s+(?:[^>]*?\s+)?(?:property|name)=["\']([^"\']+)["\'][^>]*content=["\']([^"\']*)["\']',
-        html, flags=re.IGNORECASE,
-    ):
-        meta_parts.append(f"{m.group(1)}: {m.group(2)}")
-    for m in re.finditer(
-        r'<meta\s+(?:[^>]*?\s+)?content=["\']([^"\']*)["\'][^>]*(?:property|name)=["\']([^"\']+)["\']',
-        html, flags=re.IGNORECASE,
-    ):
-        meta_parts.append(f"{m.group(2)}: {m.group(1)}")
-    if meta_parts:
+    if result["meta"]:
+        meta_parts = [f"{k}: {v}" for k, v in result["meta"].items()]
         parts.append("META: " + " | ".join(meta_parts))
 
     return "\n\n".join(parts), status
+
+
+def _fetch_url_spa_enhanced_dict(
+    url: str,
+    timeout: int = 10,
+    proxy_url: Optional[str] = None,
+    use_stealth_headers: bool = False,
+) -> Dict[str, Any]:
+    """
+    HTTP fetch returning a full structured dict with all SPA-aware extraction results.
+
+    Returns:
+        {
+            "url": str,
+            "status_code": int,
+            "content_type": str,   # "csr-only" | "next" | "nuxt" | ... | "ssr-generic"
+            "text_content": str,   # visible text stripped of scripts/styles/head
+            "structured_data": {   # merged extraction from all sources
+                "json_ld": [...],
+                "json_data": [...],
+                "preloaded_state": {...},
+                "app_config": {...},
+                "inline_data_attrs": {...},
+            },
+            "meta": {...},         # Open Graph + standard meta tags
+            "requires_playwright": bool,
+        }
+    """
+    html, status = _fetch_url(url, timeout=timeout, proxy_url=proxy_url,
+                              use_stealth_headers=use_stealth_headers)
+
+    if status >= 400 or not html:
+        return {
+            "url": url,
+            "status_code": status,
+            "content_type": "error",
+            "text_content": html or "",
+            "structured_data": {},
+            "meta": {},
+            "requires_playwright": False,
+        }
+
+    # Visible text (strips scripts/styles/head)
+    text_content = _extract_text_content(html)
+
+    # CSR-only detection
+    csr_only = _detect_csr_only(html, text_content)
+    if csr_only:
+        framework = "csr-only"
+    else:
+        framework = _detect_framework(html)
+
+    # Extended structured extraction
+    json_ld_blocks = [
+        b.strip() for b in re.findall(
+            r'<script[^>]+type=["\']application/ld\+json["\'][^>]*>(.*?)</script>',
+            html, flags=re.DOTALL | re.IGNORECASE,
+        ) if b.strip()
+    ]
+    json_data_blocks = [
+        b.strip() for b in re.findall(
+            r'<script[^>]+type=["\']application/json["\'][^>]*>(.*?)</script>',
+            html, flags=re.DOTALL | re.IGNORECASE,
+        ) if b.strip()
+    ]
+
+    preloaded_state = _extract_preloaded_state(html)
+    app_config = _extract_app_config(html)
+    inline_data_attrs = _extract_inline_data_attrs(html)
+    meta = _extract_meta_tags(html)
+
+    structured_data: Dict[str, Any] = {
+        "json_ld": json_ld_blocks,
+        "json_data": json_data_blocks,
+        "preloaded_state": preloaded_state,
+        "app_config": app_config,
+        "inline_data_attrs": inline_data_attrs,
+    }
+
+    requires_playwright = csr_only
+
+    return {
+        "url": url,
+        "status_code": status,
+        "content_type": framework,
+        "text_content": text_content,
+        "structured_data": structured_data,
+        "meta": meta,
+        "requires_playwright": requires_playwright,
+    }
 
 
 def _is_playwright_available() -> bool:

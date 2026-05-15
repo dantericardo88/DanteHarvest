@@ -164,3 +164,79 @@ def test_rights_event_log_append_only(tmp_path):
 
     log = promoter.rights_event_log()
     assert len(log) >= 2  # both demotions appended
+
+
+# ---------------------------------------------------------------------------
+# Demotion failure handling (Fix 1: bare-except → specific exceptions + audit)
+# ---------------------------------------------------------------------------
+
+def test_demotion_failure_is_recorded(tmp_path):
+    """Mock set_status to raise so the failure appears in get_failed_demotions()."""
+    from harvest_index.registry.rights_aware_promoter import RightsAwarePromoter, PromotionError
+
+    registry = _make_registry(tmp_path)
+    enforcer = _make_enforcer(tmp_path)
+    _register_pack(registry, "wf-fail", status="promoted")
+
+    promoter = RightsAwarePromoter(registry, enforcer, log_dir=tmp_path / "rights")
+    promoter.register_pack_artifacts("wf-fail", ["gone-art"])
+
+    # Patch set_status to raise a PromotionError
+    registry.set_status = MagicMock(side_effect=PromotionError("registry locked"))
+
+    promoter.run_cycle()
+
+    failures = promoter.get_failed_demotions()
+    assert len(failures) == 1
+    assert failures[0]["pack_id"] == "wf-fail"
+
+
+def test_demotion_failure_does_not_raise(tmp_path):
+    """Demotion error is caught internally — run_cycle() must not propagate it."""
+    from harvest_index.registry.rights_aware_promoter import RightsAwarePromoter, PromotionError
+
+    registry = _make_registry(tmp_path)
+    enforcer = _make_enforcer(tmp_path)
+    _register_pack(registry, "wf-silent", status="promoted")
+
+    promoter = RightsAwarePromoter(registry, enforcer, log_dir=tmp_path / "rights")
+    promoter.register_pack_artifacts("wf-silent", ["gone-art"])
+    registry.set_status = MagicMock(side_effect=OSError("disk full"))
+
+    # Must not raise
+    events = promoter.run_cycle()
+    assert isinstance(events, list)
+
+
+def test_demotion_success_not_in_failed_list(tmp_path):
+    """Successful demotion leaves get_failed_demotions() empty."""
+    registry = _make_registry(tmp_path)
+    enforcer = _make_enforcer(tmp_path)
+    _register_pack(registry, "wf-ok", status="promoted")
+
+    promoter = _make_promoter(tmp_path, registry=registry, enforcer=enforcer)
+    promoter.register_pack_artifacts("wf-ok", ["gone-art"])
+    promoter.run_cycle()
+
+    assert promoter.get_failed_demotions() == []
+
+
+def test_failed_demotions_has_error_and_ts(tmp_path):
+    """Each failure entry must contain 'error' and 'ts' keys."""
+    from harvest_index.registry.rights_aware_promoter import RightsAwarePromoter, PromotionError
+
+    registry = _make_registry(tmp_path)
+    enforcer = _make_enforcer(tmp_path)
+    _register_pack(registry, "wf-keys", status="promoted")
+
+    promoter = RightsAwarePromoter(registry, enforcer, log_dir=tmp_path / "rights")
+    promoter.register_pack_artifacts("wf-keys", ["gone-art"])
+    registry.set_status = MagicMock(side_effect=ValueError("bad state"))
+
+    promoter.run_cycle()
+
+    failures = promoter.get_failed_demotions()
+    assert len(failures) == 1
+    assert "error" in failures[0]
+    assert "ts" in failures[0]
+    assert "bad state" in failures[0]["error"]

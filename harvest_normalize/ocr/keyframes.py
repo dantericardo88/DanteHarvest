@@ -10,6 +10,7 @@ from __future__ import annotations
 import hashlib
 import io
 from datetime import datetime, timezone
+from pathlib import Path
 from types import SimpleNamespace
 from typing import Any, Dict, List, Optional
 
@@ -35,11 +36,19 @@ except ImportError:
 
 
 def _imageio_available() -> bool:
-    try:
-        import imageio  # noqa: F401
-        return True
-    except ImportError:
+    """Return True only when BOTH imageio and imageio-ffmpeg are importable.
+
+    imageio alone cannot decode video files without the ffmpeg plugin.
+    Checking for both prevents a silent failure where imageio is installed
+    but video reads raise an error at runtime because the backend is absent.
+    """
+    import importlib.util
+    if importlib.util.find_spec("imageio") is None:
         return False
+    # imageio-ffmpeg registers itself as the `imageio_ffmpeg` package
+    if importlib.util.find_spec("imageio_ffmpeg") is None:
+        return False
+    return True
 
 
 class KeyframeExtractionError(Exception):
@@ -90,7 +99,9 @@ class _ImageIOVideoReader:
     def read_frame(self) -> Optional[bytes]:
         """Read next frame, return as PNG bytes or None on end."""
         try:
-            frame = next(self._reader)
+            # Call __next__ as a regular method on Any — avoids iter() overload issues
+            # with imageio's Format.Reader whose stubs omit __iter__/__next__ declarations.
+            frame = self._reader.__next__()
             from PIL import Image
             img = Image.fromarray(frame)
             buf = io.BytesIO()
@@ -115,6 +126,41 @@ def backend_available() -> str:
     if _imageio_available():
         return "imageio"
     return "none"
+
+
+def get_backend_info() -> dict:
+    """
+    Return a dict describing which video backends are present.
+
+    Keys:
+        backend (str): 'cv2', 'imageio', or 'none' — the active backend
+        cv2_available (bool): True when opencv-python is importable
+        imageio_available (bool): True when imageio is importable
+        imageio_ffmpeg_available (bool): True when imageio-ffmpeg is importable
+    """
+    import importlib.util
+    imageio_present = importlib.util.find_spec("imageio") is not None
+    ffmpeg_present = importlib.util.find_spec("imageio_ffmpeg") is not None
+    return {
+        "backend": backend_available(),
+        "cv2_available": _CV2_AVAILABLE,
+        "imageio_available": imageio_present,
+        "imageio_ffmpeg_available": ffmpeg_present,
+    }
+
+
+def _validate_video_file(path: Path) -> None:
+    """
+    Raise ValueError with a clear message if the video file is unusable.
+
+    Checks:
+    - File must exist
+    - File must have non-zero size
+    """
+    if not path.exists():
+        raise ValueError(f"Video file does not exist: {path}")
+    if path.stat().st_size == 0:
+        raise ValueError(f"Video file is empty (zero bytes): {path}")
 
 
 def _extract_keyframes_cv2(
@@ -189,11 +235,18 @@ def extract_keyframes(
 
     Returns:
         List of dicts with frame_num, frame_data (bytes), hash, timestamp, etc.
+
+    Raises:
+        KeyframeExtractionError: If interval is non-positive, no backend is
+            available, or the video file is unreadable.
+        ValueError: If the video file does not exist or has zero size.
     """
     if interval <= 0:
         raise KeyframeExtractionError("interval must be positive")
     if max_frames <= 0:
         return []
+
+    _validate_video_file(Path(video_path))
 
     if _CV2_AVAILABLE:
         return _extract_keyframes_cv2(video_path, interval, max_frames)
@@ -202,8 +255,8 @@ def extract_keyframes(
         return _extract_keyframes_imageio(video_path, interval, max_frames)
 
     raise KeyframeExtractionError(
-        "No video backend available. Install cv2: pip install opencv-python  "
-        "or imageio: pip install imageio imageio-ffmpeg Pillow"
+        "No video backend available. Install one: "
+        "pip install opencv-python OR pip install imageio imageio-ffmpeg Pillow"
     )
 
 

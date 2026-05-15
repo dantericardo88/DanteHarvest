@@ -28,13 +28,23 @@ Constitutional guarantees:
 from __future__ import annotations
 
 import json
+import logging
 import time
 from dataclasses import dataclass, field, asdict
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 from uuid import uuid4
 
 from harvest_index.registry.pack_registry import PackRegistry, PackEntry
+
+
+# ---------------------------------------------------------------------------
+# Exceptions
+# ---------------------------------------------------------------------------
+
+class PromotionError(Exception):
+    """Raised when a promotion or demotion operation fails."""
 
 
 # ---------------------------------------------------------------------------
@@ -90,6 +100,7 @@ class RightsAwarePromoter:
         registry: PackRegistry,
         enforcer: Any,          # RetentionEnforcer (Any to avoid circular import)
         log_dir: Optional[Path] = None,
+        audit_log: Optional[Any] = None,
     ):
         self._registry = registry
         self._enforcer = enforcer
@@ -98,6 +109,9 @@ class RightsAwarePromoter:
         self._log_path = self._log_dir / self.LOG_NAME
         self._artifacts_index_path = self._log_dir / self.PACK_ARTIFACTS_INDEX
         self._pack_artifacts: Dict[str, List[str]] = self._load_artifacts_index()
+        self._audit_log = audit_log  # optional structured audit log with .record()
+        self._failed_demotions: List[dict] = []
+        self._logger = logging.getLogger(__name__)
 
     # ------------------------------------------------------------------
     # Registration
@@ -110,6 +124,13 @@ class RightsAwarePromoter:
         """
         self._pack_artifacts[pack_id] = artifact_ids
         self._save_artifacts_index()
+
+    def get_failed_demotions(self) -> List[dict]:
+        """Return all demotion failures recorded in this instance's lifetime.
+
+        Each entry contains: ``pack_id``, ``error``, ``ts`` (ISO-8601 UTC).
+        """
+        return list(self._failed_demotions)
 
     # ------------------------------------------------------------------
     # Core cycle
@@ -199,8 +220,23 @@ class RightsAwarePromoter:
     def _demote(self, entry: PackEntry, expired_ids: List[str], reason: str) -> RightsChangeEvent:
         try:
             self._registry.set_status(entry.pack_id, STATUS_RIGHTS_EXPIRED)
-        except Exception:
-            pass
+        except (PromotionError, ValueError, IOError, OSError) as exc:
+            self._logger.error("Demotion failed for %s: %s", entry.pack_id, exc)
+            failure = {
+                "pack_id": entry.pack_id,
+                "error": str(exc),
+                "ts": datetime.now(timezone.utc).isoformat(),
+            }
+            self._failed_demotions.append(failure)
+            if self._audit_log is not None:
+                try:
+                    self._audit_log.record(
+                        event_type="demotion_failed",
+                        pack_id=entry.pack_id,
+                        error=str(exc),
+                    )
+                except Exception:
+                    pass
         return RightsChangeEvent(
             event_id=str(uuid4()),
             pack_id=entry.pack_id,
@@ -214,8 +250,8 @@ class RightsAwarePromoter:
     def _restore(self, entry: PackEntry, artifact_ids: List[str], reason: str) -> RightsChangeEvent:
         try:
             self._registry.set_status(entry.pack_id, STATUS_RIGHTS_RESTORED)
-        except Exception:
-            pass
+        except (PromotionError, ValueError, IOError, OSError) as exc:
+            self._logger.error("Restoration failed for %s: %s", entry.pack_id, exc)
         return RightsChangeEvent(
             event_id=str(uuid4()),
             pack_id=entry.pack_id,

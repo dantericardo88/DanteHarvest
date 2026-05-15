@@ -93,6 +93,7 @@ _ENV_OVERRIDES: Dict[str, tuple] = {
     "HARVEST_CRAWL_TIMEOUT": ("crawl_timeout_s", float),
     "HARVEST_CRAWL_PAGES": ("max_crawl_pages", int),
     "HARVEST_ENCRYPT": ("encrypt_at_rest", bool),
+    "HARVEST_ENCRYPT_STORE": ("encrypt_at_rest", bool),
     "HARVEST_KEY_ROTATION_DAYS": ("key_rotation_days", int),
     "HARVEST_RETENTION_DAYS": ("retention_days", int),
     "HARVEST_CHUNK_SIZE": ("chunk_size", int),
@@ -211,6 +212,11 @@ class HarvestConfig:
 
     def as_dict(self) -> Dict[str, Any]:
         return dict(self._merged)
+
+    @property
+    def encryption_enabled(self) -> bool:
+        """Alias for ``encrypt_at_rest`` — used by StorageFactory."""
+        return bool(self._merged.get("encrypt_at_rest", True))
 
     def available_profiles(self) -> List[str]:
         built_in = list(_BUILT_IN_PROFILES.keys())

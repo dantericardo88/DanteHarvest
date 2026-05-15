@@ -30,6 +30,7 @@ class RSSConnector(BaseConnector):
     """
 
     SOURCE_TYPE = "rss_feed"
+    required_env_vars: list = []  # No credentials needed — always available
 
     def __init__(self, config: RSSConnectorConfig):
         self._config = config

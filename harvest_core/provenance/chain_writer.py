@@ -10,6 +10,9 @@ Constitutional guarantees:
 - SHA-256 content hashing on every entry
 - fsync for on-disk durability
 - Fail-closed: any write error raises ChainError
+- Optional RunContractEnforcer wired via enforcer= parameter:
+    writer = ChainWriter(path, run_id, enforcer=RunContractEnforcer())
+  When set, validate_chain_entry() is called before every append.
 """
 
 import asyncio
@@ -17,10 +20,13 @@ import json
 import os
 from datetime import datetime
 from pathlib import Path
-from typing import List, Optional
+from typing import TYPE_CHECKING, List, Optional
 
 from harvest_core.provenance.chain_entry import ChainEntry
 from harvest_core.control.exceptions import ChainError, StorageError
+
+if TYPE_CHECKING:
+    from harvest_core.constitution.run_contract_enforcer import RunContractEnforcer
 
 try:
     import fcntl
@@ -42,9 +48,15 @@ class ChainWriter:
     Every write: assigns sequence → computes hash → appends → fsyncs.
     """
 
-    def __init__(self, chain_file_path: Path, run_id: str):
+    def __init__(
+        self,
+        chain_file_path: Path,
+        run_id: str,
+        enforcer: "Optional[RunContractEnforcer]" = None,
+    ):
         self.chain_file_path = Path(chain_file_path)
         self.run_id = run_id
+        self._enforcer = enforcer
         self._sequence = 0
         self._lock = asyncio.Lock()
         self.chain_file_path.parent.mkdir(parents=True, exist_ok=True)
@@ -70,6 +82,8 @@ class ChainWriter:
                 raise ChainError(
                     f"Entry run_id '{entry.run_id}' does not match chain run_id '{self.run_id}'"
                 )
+            if self._enforcer is not None:
+                self._enforcer.validate_chain_entry(entry.model_dump())
             self._sequence += 1
             entry.sequence = self._sequence
             entry.content_hash = entry.compute_hash()

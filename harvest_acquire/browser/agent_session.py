@@ -33,6 +33,7 @@ from harvest_acquire.browser.action_layer import (
     BrowserActionType,
     ActionResult,
 )
+from harvest_acquire.browser.dom_selector_builder import DOMSelectorBuilder
 from harvest_core.control.exceptions import AcquisitionError
 
 
@@ -211,14 +212,23 @@ def _heuristic_plan(goal: str, page_url: str, page_snapshot: str) -> List[Dict[s
     """
     Keyword-driven heuristic planner. Generates a single focused action
     based on the dominant intent in the goal string.
+
+    Uses DOMSelectorBuilder to extract real selectors from page_snapshot so
+    that click/input actions target elements that actually exist in the DOM
+    rather than hardcoded guesses like ``button[type=submit]``.
     Always produces at least one meaningful action (never noop-only).
     """
     import re as _re
+
+    _dom = DOMSelectorBuilder()
+    snapshot = page_snapshot or ""
     g = goal.lower()
 
+    # --- navigate intent ---------------------------------------------------
     url_match = _re.search(r"https?://\S+", goal)
     if url_match:
         return [{"type": "navigate", "value": url_match.group()}]
+
     if any(w in g for w in ("navigate", "go to", "open", "visit", "load")):
         quoted = _re.search(r'["\']([^"\']+)["\']', goal)
         if quoted:
@@ -228,22 +238,52 @@ def _heuristic_plan(goal: str, page_url: str, page_snapshot: str) -> List[Dict[s
             return [{"type": "navigate", "value": target}]
         return [{"type": "screenshot"}, {"type": "evaluate", "value": "document.title"}]
 
+    # --- click intent ------------------------------------------------------
     if any(w in g for w in ("click", "press", "tap", "submit", "button", "link")):
         quoted = _re.search(r'["\']([^"\']{1,60})["\']', goal)
-        selector_hint = quoted.group(1) if quoted else "button[type=submit]"
-        return [{"type": "click", "value": selector_hint}]
+        if quoted:
+            target_text = quoted.group(1)
+            selector = _dom.build_click_selector(target_text, snapshot)
+        else:
+            # No quoted hint — use submit selectors from DOM if available
+            elements = _dom.extract_interactive_elements(snapshot)
+            submit_sels = elements.get("submit") or []
+            selector = submit_sels[0] if submit_sels else "button, [role=button]"
+        return [{"type": "click", "value": selector}]
 
+    # --- type/fill intent --------------------------------------------------
     if any(w in g for w in ("type", "fill", "enter", "input", "write")):
-        quoted = _re.search(r'["\']([^"\']{1,200})["\']', goal)
-        text = quoted.group(1) if quoted else ""
-        return [{"type": "type", "value": text}]
+        quoted_parts = _re.findall(r'["\']([^"\']{1,200})["\']', goal)
+        # Expect: fill <field> with <value>  — two quoted strings
+        if len(quoted_parts) >= 2:
+            field_hint, text = quoted_parts[0], quoted_parts[1]
+            selector = _dom.build_input_selector(field_hint, snapshot)
+            return [
+                {"type": "click", "value": selector},
+                {"type": "type", "value": text},
+            ]
+        elif len(quoted_parts) == 1:
+            # Single quote: treat as the text to type; pick first text input from DOM
+            text = quoted_parts[0]
+            elements = _dom.extract_interactive_elements(snapshot)
+            inputs = elements.get("inputs") or []
+            selector = inputs[0] if inputs else "input[type=text]:first-of-type"
+            return [
+                {"type": "click", "value": selector},
+                {"type": "type", "value": text},
+            ]
+        else:
+            return [{"type": "type", "value": ""}]
 
+    # --- scroll intent -----------------------------------------------------
     if any(w in g for w in ("scroll", "down", "bottom", "load more")):
         return [{"type": "evaluate", "value": "window.scrollTo(0, document.body.scrollHeight)"}]
 
+    # --- wait intent -------------------------------------------------------
     if any(w in g for w in ("wait", "pause", "loading", "appear")):
         return [{"type": "wait", "value": "1000"}, {"type": "screenshot"}]
 
+    # --- extract/read intent -----------------------------------------------
     if any(w in g for w in ("extract", "scrape", "get", "read", "find", "search", "locate", "fetch")):
         return [
             {"type": "evaluate", "value": "document.body ? document.body.innerText.slice(0,3000) : ''"},
@@ -269,14 +309,31 @@ class ClaudeHaikuPlanner:
             return _heuristic_plan(goal, page_url, page_snapshot)
         try:
             import anthropic
+            import json as _json
+            import re as _re
+
+            # Build DOM-aware element summary to ground the LLM's selector choices
+            _dom = DOMSelectorBuilder()
+            elements = _dom.extract_interactive_elements(page_snapshot or "")
+            elements_summary = (
+                f"Buttons: {elements['buttons'][:5]}\n"
+                f"Inputs:  {elements['inputs'][:5]}\n"
+                f"Links:   {elements['links'][:5]}\n"
+                f"Submit:  {elements['submit'][:3]}"
+            )
+
             client = anthropic.Anthropic(api_key=api_key)
             prompt = (
-                f"You are a browser automation agent. Given the goal, current URL, and page HTML, "
-                f"output a JSON array of browser actions to take next.\n\n"
-                f"Goal: {goal}\nURL: {page_url}\nPage (truncated):\n{page_snapshot[:1500]}\n\n"
+                f"You are a browser automation agent. Given the goal, current URL, page HTML, "
+                f"and the real CSS selectors extracted from the page, output a JSON array of "
+                f"browser actions to take next.\n\n"
+                f"Goal: {goal}\nURL: {page_url}\n"
+                f"Page (truncated):\n{page_snapshot[:1000]}\n\n"
+                f"Interactive elements found on this page:\n{elements_summary}\n\n"
                 f"Available action types: navigate (value=url), click (value=css_selector), "
                 f"type (value=text), wait (value=ms), screenshot (no value), "
                 f"evaluate (value=js_expression).\n\n"
+                f"Use the real CSS selectors above when targeting elements. "
                 f"Respond with ONLY a JSON array, e.g.: "
                 f'[{{"type": "navigate", "value": "https://example.com"}}]'
             )
@@ -285,12 +342,16 @@ class ClaudeHaikuPlanner:
                 max_tokens=512,
                 messages=[{"role": "user", "content": prompt}],
             )
-            import json as _json, re as _re
-            text_blocks = [b for b in msg.content if hasattr(b, "text")]
-            if not text_blocks:
+            # Extract text from the first TextBlock in the response.
+            # Use getattr so static analysers don't flag access on non-TextBlock
+            # union members (ThinkingBlock, ToolUseBlock, etc. have no .text).
+            text_content = next(
+                (getattr(b, "text", None) for b in msg.content if b.type == "text"),
+                None,
+            )
+            if not text_content:
                 return _heuristic_plan(goal, page_url, page_snapshot)
-            text = str(getattr(text_blocks[0], "text", "")).strip()
-            arr_match = _re.search(r"\[.*\]", text, _re.DOTALL)
+            arr_match = _re.search(r"\[.*\]", text_content.strip(), _re.DOTALL)
             if arr_match:
                 return _json.loads(arr_match.group())
         except Exception:

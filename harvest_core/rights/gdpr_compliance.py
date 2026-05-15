@@ -31,6 +31,8 @@ Constitutional guarantees:
 from __future__ import annotations
 
 import json
+import logging
+import shutil
 import time
 from dataclasses import dataclass, field, asdict
 from datetime import datetime, timezone
@@ -40,6 +42,8 @@ from uuid import uuid4
 
 from harvest_core.rights.retention_enforcer import RetentionEnforcer, ExpiredArtifact
 from harvest_core.rights.rights_model import RetentionClass
+
+_log = logging.getLogger(__name__)
 
 
 # ---------------------------------------------------------------------------
@@ -147,6 +151,7 @@ class GDPRComplianceManager:
         self._log_dir.mkdir(parents=True, exist_ok=True)
         self._erasure_log = self._log_dir / self.ERASURE_LOG
         self._requests_log = self._log_dir / self.REQUESTS_LOG
+        self._deletion_log: List[dict] = []
 
     # ------------------------------------------------------------------
     # Article 17 — Right to Erasure
@@ -261,6 +266,8 @@ class GDPRComplianceManager:
             if record.retention_class == RetentionClass.LEGAL_HOLD.value:
                 skipped_legal_hold.append(artifact_id)
                 continue
+            # Delete actual files on disk before removing from registry
+            self._delete_artifact_files(record.__dict__)
             # Force-expire by setting expires_at to epoch and running gc
             record.expires_at = "1970-01-01T00:00:00+00:00"
             self._enforcer._records[artifact_id] = record
@@ -282,6 +289,60 @@ class GDPRComplianceManager:
             not_found=not_found,
             erased_at=time.time(),
         )
+
+    def _delete_artifact_files(self, record: dict) -> List[Path]:
+        """
+        Delete the physical file(s) associated with a retention record.
+
+        Checks both ``artifact_path`` and ``file_path`` fields.
+        Directories are removed with shutil.rmtree; regular files with Path.unlink.
+        Each outcome is appended to the internal deletion log.
+
+        Returns:
+            List of Path objects that were targeted for deletion.
+        """
+        deleted_paths: List[Path] = []
+        deleted_at = time.time()
+        artifact_id = record.get("artifact_id", "<unknown>")
+
+        raw_path = record.get("artifact_path") or record.get("file_path")
+        if not raw_path:
+            return deleted_paths
+
+        path = Path(raw_path)
+        success = False
+        try:
+            if path.is_dir():
+                shutil.rmtree(path, ignore_errors=True)
+                success = True
+                _log.info("GDPR erasure: removed directory %s (artifact_id=%s)", path, artifact_id)
+            else:
+                path.unlink(missing_ok=True)
+                success = True
+                _log.info("GDPR erasure: deleted file %s (artifact_id=%s)", path, artifact_id)
+            deleted_paths.append(path)
+        except Exception as exc:
+            _log.warning(
+                "GDPR erasure: failed to delete %s (artifact_id=%s): %s",
+                path, artifact_id, exc,
+            )
+            success = False
+
+        self._deletion_log.append({
+            "artifact_id": artifact_id,
+            "path": str(path),
+            "deleted_at": deleted_at,
+            "success": success,
+        })
+        return deleted_paths
+
+    def get_deletion_log(self) -> List[dict]:
+        """Return a list of file-deletion outcomes from erasure processing.
+
+        Each entry contains:
+            artifact_id (str), path (str), deleted_at (float), success (bool)
+        """
+        return list(self._deletion_log)
 
     def _append_erasure_log(self, receipt: ErasureReceipt) -> None:
         try:
