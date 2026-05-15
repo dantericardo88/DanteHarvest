@@ -129,3 +129,210 @@ async def test_fetch_http_mode_ignores_spa_params():
     call_kwargs = mock_http.call_args[1]
     assert "spa_mode" not in call_kwargs
     assert "extra_wait_ms" not in call_kwargs
+
+
+# ---------------------------------------------------------------------------
+# _fetch_url_spa_enhanced
+# ---------------------------------------------------------------------------
+
+def test_spa_enhanced_extracts_json_ld():
+    from harvest_acquire.crawl.crawlee_adapter import _fetch_url_spa_enhanced
+
+    html = (
+        '<html><head>'
+        '<script type="application/ld+json">{"@type":"Product","name":"Widget"}</script>'
+        '</head><body><p>Hello</p></body></html>'
+    )
+    with patch(
+        "harvest_acquire.crawl.crawlee_adapter._fetch_url",
+        return_value=(html, 200),
+    ):
+        result, status = _fetch_url_spa_enhanced("https://example.com")
+
+    assert status == 200
+    assert "JSON-LD:" in result
+    assert '"@type":"Product"' in result
+
+
+def test_spa_enhanced_extracts_next_data():
+    from harvest_acquire.crawl.crawlee_adapter import _fetch_url_spa_enhanced
+
+    html = (
+        '<html><body>'
+        '<script>window.__NEXT_DATA__ = {"props":{"title":"Hello Next"}};</script>'
+        '</body></html>'
+    )
+    with patch(
+        "harvest_acquire.crawl.crawlee_adapter._fetch_url",
+        return_value=(html, 200),
+    ):
+        result, status = _fetch_url_spa_enhanced("https://next.example.com")
+
+    assert status == 200
+    assert "__NEXT_DATA__" in result
+    assert "Hello Next" in result
+
+
+def test_spa_enhanced_extracts_application_json_blocks():
+    from harvest_acquire.crawl.crawlee_adapter import _fetch_url_spa_enhanced
+
+    html = (
+        '<html><body>'
+        '<script type="application/json">{"items":[1,2,3]}</script>'
+        '</body></html>'
+    )
+    with patch(
+        "harvest_acquire.crawl.crawlee_adapter._fetch_url",
+        return_value=(html, 200),
+    ):
+        result, status = _fetch_url_spa_enhanced("https://example.com")
+
+    assert "JSON-DATA:" in result
+    assert '"items"' in result
+
+
+def test_spa_enhanced_extracts_meta_tags():
+    from harvest_acquire.crawl.crawlee_adapter import _fetch_url_spa_enhanced
+
+    html = (
+        '<html><head>'
+        '<meta property="og:title" content="My SPA Page">'
+        '<meta name="description" content="A great page">'
+        '</head><body></body></html>'
+    )
+    with patch(
+        "harvest_acquire.crawl.crawlee_adapter._fetch_url",
+        return_value=(html, 200),
+    ):
+        result, status = _fetch_url_spa_enhanced("https://example.com")
+
+    assert "META:" in result
+    assert "og:title" in result
+    assert "My SPA Page" in result
+
+
+def test_spa_enhanced_passes_through_error_status():
+    from harvest_acquire.crawl.crawlee_adapter import _fetch_url_spa_enhanced
+
+    with patch(
+        "harvest_acquire.crawl.crawlee_adapter._fetch_url",
+        return_value=("", 404),
+    ):
+        result, status = _fetch_url_spa_enhanced("https://example.com/missing")
+
+    assert status == 404
+    assert result == ""
+
+
+# ---------------------------------------------------------------------------
+# auto_spa_detection in CrawleeAdapter
+# ---------------------------------------------------------------------------
+
+def test_adapter_stores_auto_spa_detection():
+    from harvest_acquire.crawl.crawlee_adapter import CrawleeAdapter
+    adapter = CrawleeAdapter(auto_spa_detection=False)
+    assert adapter._auto_spa is False
+
+
+def test_adapter_auto_spa_detection_default_true():
+    from harvest_acquire.crawl.crawlee_adapter import CrawleeAdapter
+    adapter = CrawleeAdapter()
+    assert adapter._auto_spa is True
+
+
+@pytest.mark.asyncio
+async def test_auto_spa_triggers_enhanced_path_when_spa_detected():
+    from harvest_acquire.crawl.crawlee_adapter import CrawleeAdapter
+
+    spa_html = '<html><body data-reactroot=""><div id="root"></div></body></html>'
+
+    adapter = CrawleeAdapter(
+        use_js_rendering=False,
+        auto_spa_detection=True,
+        use_sitemap=False,
+        respect_robots=False,
+    )
+
+    enriched = "base text\n\nJSON-LD: {}"
+
+    with patch("harvest_acquire.crawl.crawlee_adapter._fetch_url", return_value=(spa_html, 200)), \
+         patch("harvest_acquire.crawl.crawlee_adapter._is_playwright_available", return_value=False), \
+         patch("harvest_acquire.crawl.crawlee_adapter._fetch_url_spa_enhanced", return_value=(enriched, 200)) as mock_enhanced:
+        result, status = await adapter._fetch("https://react.example.com")
+
+    mock_enhanced.assert_called_once()
+    assert result == enriched
+    assert status == 200
+
+
+@pytest.mark.asyncio
+async def test_auto_spa_skips_enhanced_when_not_spa():
+    from harvest_acquire.crawl.crawlee_adapter import CrawleeAdapter
+
+    plain_html = "<html><body><p>Plain static content</p></body></html>"
+
+    adapter = CrawleeAdapter(
+        use_js_rendering=False,
+        auto_spa_detection=True,
+        use_sitemap=False,
+        respect_robots=False,
+    )
+
+    with patch("harvest_acquire.crawl.crawlee_adapter._fetch_url", return_value=(plain_html, 200)) as mock_fetch, \
+         patch("harvest_acquire.crawl.crawlee_adapter._fetch_url_spa_enhanced") as mock_enhanced:
+        result, status = await adapter._fetch("https://static.example.com")
+
+    mock_enhanced.assert_not_called()
+    assert result == plain_html
+
+
+# ---------------------------------------------------------------------------
+# rendering_mode property
+# ---------------------------------------------------------------------------
+
+def test_rendering_mode_playwright():
+    from harvest_acquire.crawl.crawlee_adapter import CrawleeAdapter
+    adapter = CrawleeAdapter()
+    adapter._use_js = True
+    assert adapter.rendering_mode == "playwright"
+
+
+def test_rendering_mode_http_spa():
+    from harvest_acquire.crawl.crawlee_adapter import CrawleeAdapter
+    adapter = CrawleeAdapter(auto_spa_detection=True)
+    adapter._use_js = False
+    assert adapter.rendering_mode == "http_spa"
+
+
+def test_rendering_mode_http():
+    from harvest_acquire.crawl.crawlee_adapter import CrawleeAdapter
+    adapter = CrawleeAdapter(auto_spa_detection=False)
+    adapter._use_js = False
+    assert adapter.rendering_mode == "http"
+
+
+# ---------------------------------------------------------------------------
+# _auto_detect_spa framework markers
+# ---------------------------------------------------------------------------
+
+@pytest.mark.parametrize("marker,html_snippet", [
+    ("react", '<div data-reactroot="">'),
+    ("vue", '<div id="app" v-cloak>'),
+    ("angular", '<app-root ng-version="12.0.0">'),
+    ("__NEXT_DATA__", '<script id="__NEXT_DATA__" type="application/json">'),
+    ("svelte", '<!-- Svelte component -->'),
+    ("_nuxt", '<div id="__nuxt">'),
+    ("ember", '<div class="ember-view">'),
+    ("data-reactroot", '<div data-reactroot="">'),
+    ("data-v-", '<div data-v-abc123>'),
+])
+def test_auto_detect_spa_recognizes_framework_markers(marker, html_snippet):
+    from harvest_acquire.crawl.crawlee_adapter import _auto_detect_spa
+    html = f"<html><body>{html_snippet}</body></html>"
+    assert _auto_detect_spa(html) is True
+
+
+def test_auto_detect_spa_returns_false_for_plain_html():
+    from harvest_acquire.crawl.crawlee_adapter import _auto_detect_spa
+    html = "<html><body><h1>Hello World</h1><p>Static content only.</p></body></html>"
+    assert _auto_detect_spa(html) is False

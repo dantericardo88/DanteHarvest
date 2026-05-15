@@ -38,6 +38,12 @@ _PATTERNS: dict[str, re.Pattern] = {
     "bearer_token": re.compile(r"(?i)bearer\s+[0-9a-zA-Z\-._~+/]+=*"),
     "private_key_header": re.compile(r"-----BEGIN\s+(RSA|EC|DSA|OPENSSH|PGP)\s+PRIVATE KEY-----"),
     "jwt_token": re.compile(r"eyJ[a-zA-Z0-9_-]+\.eyJ[a-zA-Z0-9_-]+\.[a-zA-Z0-9_-]+"),
+    "anthropic_api_key": re.compile(r"sk-ant-[a-zA-Z0-9\-_]{20,}"),
+    "openai_api_key": re.compile(r"sk-[a-zA-Z0-9]{20,}"),
+    "stripe_key": re.compile(r"(?:sk|pk)_(?:live|test)_[a-zA-Z0-9]{24,}"),
+    "google_api_key": re.compile(r"AIza[0-9A-Za-z\-_]{35}"),
+    "npm_token": re.compile(r"npm_[a-zA-Z0-9]{36}"),
+    "discord_token": re.compile(r"[MN][a-zA-Z0-9]{23}\.[a-zA-Z0-9\-_]{6}\.[a-zA-Z0-9\-_]{27}"),
 
     # PII
     "email_address": re.compile(
@@ -53,10 +59,19 @@ _PATTERNS: dict[str, re.Pattern] = {
     "ip_address_private": re.compile(
         r"\b(10\.\d{1,3}\.\d{1,3}\.\d{1,3}|172\.(?:1[6-9]|2\d|3[01])\.\d{1,3}\.\d{1,3}|192\.168\.\d{1,3}\.\d{1,3})\b"
     ),
+    "uk_nino": re.compile(r"\b[A-Z]{2}\s?\d{2}\s?\d{2}\s?\d{2}\s?[A-D]\b"),
+    "iban": re.compile(r"\b[A-Z]{2}\d{2}[A-Z0-9]{4}\d{7}(?:[A-Z0-9]?){0,16}\b"),
+    "passport_number": re.compile(r"\b[A-Z]{1,2}\d{6,9}\b"),
+    "date_of_birth": re.compile(r"(?i)\b(?:dob|date\s+of\s+birth)[:\s]+\d{1,2}[/-]\d{1,2}[/-]\d{2,4}\b"),
+    "medical_record": re.compile(r"(?i)\bMRN[:\s]+\d{5,10}\b"),
+    "vehicle_vin": re.compile(r"\b[A-HJ-NPR-Z0-9]{17}\b"),
 }
 
 # PII patterns that need review but don't always require redaction
-_PII_PATTERNS = {"email_address", "us_phone", "us_ssn", "credit_card"}
+_PII_PATTERNS = {
+    "email_address", "us_phone", "us_ssn", "credit_card",
+    "uk_nino", "iban", "passport_number", "date_of_birth", "medical_record", "vehicle_vin",
+}
 # Credential patterns that always require redaction
 _SECRET_PATTERNS = set(_PATTERNS.keys()) - _PII_PATTERNS
 

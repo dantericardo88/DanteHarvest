@@ -1,7 +1,9 @@
 """Tests for WhisperAdapter — audio transcription normalization."""
 
+import sys
 import wave
 import struct
+import unittest.mock as mock
 import pytest
 from pathlib import Path
 
@@ -61,8 +63,8 @@ async def test_whisper_not_installed_raises_normalization_error(tmp_path):
     wav_path = make_wav(tmp_path / "test.wav")
     adapter = WhisperAdapter(model_name="base")
 
-    with mock.patch.dict(sys.modules, {"whisper": None}):
-        with pytest.raises(NormalizationError, match="openai-whisper"):
+    with mock.patch.dict(sys.modules, {"whisper": None, "faster_whisper": None}):
+        with pytest.raises(NormalizationError):
             await adapter.transcribe(wav_path, run_id="r1")
 
 
@@ -96,3 +98,91 @@ def test_transcript_result_to_segments_with_words():
     assert len(segments) == 2
     assert "hello" in segments[0]["text"]
     assert "invoice" in segments[1]["text"]
+
+
+def test_available_backends_returns_list():
+    backends = WhisperAdapter.available_backends()
+    assert isinstance(backends, list)
+    for name in backends:
+        assert isinstance(name, str)
+
+
+def test_is_any_backend_available_returns_bool():
+    result = WhisperAdapter.is_any_backend_available()
+    assert isinstance(result, bool)
+
+
+def test_available_backends_includes_faster_whisper_when_importable():
+    fake_fw = mock.MagicMock()
+    with mock.patch.dict(sys.modules, {"faster_whisper": fake_fw, "whisper": None, "openai": None}):
+        backends = WhisperAdapter.available_backends()
+    assert "faster-whisper" in backends
+    assert "openai-whisper" not in backends
+
+
+def test_available_backends_includes_openai_whisper_when_importable():
+    fake_whisper = mock.MagicMock()
+    with mock.patch.dict(sys.modules, {"faster_whisper": None, "whisper": fake_whisper, "openai": None}):
+        backends = WhisperAdapter.available_backends()
+    assert "openai-whisper" in backends
+    assert "faster-whisper" not in backends
+
+
+def test_transcribe_local_tries_faster_whisper_first(tmp_path):
+    wav_path = make_wav(tmp_path / "test.wav")
+    adapter = WhisperAdapter(model_name="base")
+
+    fake_word = mock.MagicMock()
+    fake_word.word = "hello"
+    fake_word.start = 0.0
+    fake_word.end = 0.5
+    fake_word.probability = 0.99
+
+    fake_seg = mock.MagicMock()
+    fake_seg.text = "hello"
+    fake_seg.words = [fake_word]
+
+    fake_info = mock.MagicMock()
+    fake_info.language = "en"
+    fake_info.duration = 1.0
+
+    fake_model_instance = mock.MagicMock()
+    fake_model_instance.transcribe.return_value = ([fake_seg], fake_info)
+
+    fake_fw_module = mock.MagicMock()
+    fake_fw_module.WhisperModel.return_value = fake_model_instance
+
+    with mock.patch.dict(sys.modules, {"faster_whisper": fake_fw_module}):
+        result = adapter._transcribe_local(wav_path, language=None)
+
+    assert result.text == "hello"
+    assert result.model.startswith("faster-whisper/")
+    fake_fw_module.WhisperModel.assert_called_once()
+
+
+def test_transcribe_local_falls_back_to_openai_whisper_when_faster_whisper_missing(tmp_path):
+    wav_path = make_wav(tmp_path / "test.wav")
+    adapter = WhisperAdapter(model_name="base")
+
+    fake_whisper = mock.MagicMock()
+    fake_whisper.load_model.return_value.transcribe.return_value = {
+        "text": "world",
+        "segments": [],
+        "language": "en",
+        "duration": 1.0,
+    }
+
+    with mock.patch.dict(sys.modules, {"faster_whisper": None, "whisper": fake_whisper}):
+        result = adapter._transcribe_local(wav_path, language=None)
+
+    assert result.text == "world"
+    assert result.model == "base"
+
+
+def test_transcribe_local_raises_when_no_backend_available(tmp_path):
+    wav_path = make_wav(tmp_path / "test.wav")
+    adapter = WhisperAdapter(model_name="base")
+
+    with mock.patch.dict(sys.modules, {"faster_whisper": None, "whisper": None}):
+        with pytest.raises(NormalizationError, match="No local transcription backend"):
+            adapter._transcribe_local(wav_path, language=None)

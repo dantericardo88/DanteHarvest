@@ -4,14 +4,14 @@ WhisperAdapter — audio-to-transcript normalization.
 Harvested from: OpenAdapt/Screenpipe whisper integration patterns.
 
 Two modes:
-1. Local (default, local-first): uses openai-whisper (MIT) installed locally.
-   Zero network calls. Falls back to stub transcript when whisper not installed,
-   with a clear ImportError (zero-ambiguity: no silent empty result).
+1. Local (default, local-first): tries faster-whisper then openai-whisper.
+   Zero network calls. Raises NormalizationError when neither is installed,
+   with a clear message listing install options (zero-ambiguity).
 2. OpenAI API: uses openai.Audio.transcribe when api_key provided.
    Fail-closed: API errors raise NormalizationError, never return empty.
 
 Constitutional guarantees:
-- Local-first: local whisper activated by default
+- Local-first: faster-whisper preferred, openai-whisper as fallback
 - Fail-closed: empty audio raises NormalizationError (not empty string)
 - Zero-ambiguity: transcript is always a non-None str; words list always List[TranscriptWord]
 """
@@ -95,6 +95,32 @@ class WhisperAdapter:
         self.chain_writer = chain_writer
         self._model = None
 
+    @staticmethod
+    def available_backends() -> List[str]:
+        """Return names of importable transcription backends."""
+        backends: List[str] = []
+        try:
+            import faster_whisper  # noqa: F401
+            backends.append("faster-whisper")
+        except Exception:
+            pass
+        try:
+            import whisper  # noqa: F401
+            backends.append("openai-whisper")
+        except Exception:
+            pass
+        try:
+            import openai  # noqa: F401
+            backends.append("openai-api")
+        except Exception:
+            pass
+        return backends
+
+    @staticmethod
+    def is_any_backend_available() -> bool:
+        """Return True if at least one transcription backend is importable."""
+        return len(WhisperAdapter.available_backends()) > 0
+
     async def transcribe(
         self,
         audio_path: str | Path,
@@ -157,13 +183,51 @@ class WhisperAdapter:
 
         return result
 
+    def _transcribe_faster_whisper(self, path: Path, language: Optional[str]) -> TranscriptResult:
+        from faster_whisper import WhisperModel  # type: ignore[import]
+        model = WhisperModel(self.model_name, device="cpu", compute_type="int8")
+        if language:
+            segments, info = model.transcribe(  # type: ignore[call-arg]
+                str(path), beam_size=5, word_timestamps=True, language=language,
+            )
+        else:
+            segments, info = model.transcribe(  # type: ignore[call-arg]
+                str(path), beam_size=5, word_timestamps=True,
+            )
+        words: List[TranscriptWord] = []
+        full_text_parts: List[str] = []
+        for seg in segments:
+            full_text_parts.append(seg.text.strip())
+            for w in (seg.words or []):
+                words.append(TranscriptWord(
+                    word=w.word.strip(),
+                    start=w.start,
+                    end=w.end,
+                    confidence=w.probability,
+                ))
+        return TranscriptResult(
+            text=" ".join(full_text_parts),
+            words=words,
+            language=info.language,
+            duration_seconds=getattr(info, "duration", 0.0),
+            model=f"faster-whisper/{self.model_name}",
+        )
+
     def _transcribe_local(self, path: Path, language: Optional[str]) -> TranscriptResult:
         try:
+            return self._transcribe_faster_whisper(path, language)
+        except ImportError:
+            pass
+
+        try:
             import whisper
-        except ImportError as e:
+        except ImportError:
             raise NormalizationError(
-                "openai-whisper not installed. Run: pip install openai-whisper"
-            ) from e
+                "No local transcription backend available. "
+                "Install faster-whisper: pip install faster-whisper  "
+                "or openai-whisper: pip install openai-whisper  "
+                "or pass api_key for OpenAI API mode."
+            )
 
         if self._model is None:
             self._model = whisper.load_model(self.model_name)
@@ -207,18 +271,20 @@ class WhisperAdapter:
         client = openai.AsyncOpenAI(api_key=self.api_key)
         try:
             with open(path, "rb") as f:
-                response = await client.audio.transcriptions.create(
+                response = await client.audio.transcriptions.create(  # type: ignore[call-overload]
                     model="whisper-1",
                     file=f,
-                    language=language,
                     response_format="verbose_json",
+                    language=language if language else openai.NOT_GIVEN,
                     timestamp_granularities=["word"],
                 )
+        except NormalizationError:
+            raise
         except Exception as e:
             raise NormalizationError(f"OpenAI Whisper API error: {e}") from e
 
         words: List[TranscriptWord] = []
-        for w in getattr(response, "words", []) or []:
+        for w in (response.words or []):
             words.append(TranscriptWord(
                 word=w.word,
                 start=float(w.start),
@@ -229,7 +295,7 @@ class WhisperAdapter:
         return TranscriptResult(
             text=response.text.strip(),
             words=words,
-            language=getattr(response, "language", language or "en"),
-            duration_seconds=getattr(response, "duration", 0.0),
+            language=response.language,
+            duration_seconds=float(response.duration),
             model="whisper-1",
         )

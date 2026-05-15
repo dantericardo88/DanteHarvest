@@ -207,12 +207,95 @@ ActionPlanFn = Callable[[str, str, str], List[Dict[str, Any]]]
 # signature: plan_fn(goal, page_url, page_snapshot) -> list of action dicts
 
 
-def _default_plan(goal: str, page_url: str, page_snapshot: str) -> List[Dict[str, Any]]:
-    """Minimal fallback planner: SCREENSHOT to observe, then no-op WAIT."""
-    return [
-        {"type": "screenshot"},
-        {"type": "wait", "value": "500"},
-    ]
+def _heuristic_plan(goal: str, page_url: str, page_snapshot: str) -> List[Dict[str, Any]]:
+    """
+    Keyword-driven heuristic planner. Generates a single focused action
+    based on the dominant intent in the goal string.
+    Always produces at least one meaningful action (never noop-only).
+    """
+    import re as _re
+    g = goal.lower()
+
+    url_match = _re.search(r"https?://\S+", goal)
+    if url_match:
+        return [{"type": "navigate", "value": url_match.group()}]
+    if any(w in g for w in ("navigate", "go to", "open", "visit", "load")):
+        quoted = _re.search(r'["\']([^"\']+)["\']', goal)
+        if quoted:
+            target = quoted.group(1)
+            if not target.startswith("http"):
+                target = "https://" + target
+            return [{"type": "navigate", "value": target}]
+        return [{"type": "screenshot"}, {"type": "evaluate", "value": "document.title"}]
+
+    if any(w in g for w in ("click", "press", "tap", "submit", "button", "link")):
+        quoted = _re.search(r'["\']([^"\']{1,60})["\']', goal)
+        selector_hint = quoted.group(1) if quoted else "button[type=submit]"
+        return [{"type": "click", "value": selector_hint}]
+
+    if any(w in g for w in ("type", "fill", "enter", "input", "write")):
+        quoted = _re.search(r'["\']([^"\']{1,200})["\']', goal)
+        text = quoted.group(1) if quoted else ""
+        return [{"type": "type", "value": text}]
+
+    if any(w in g for w in ("scroll", "down", "bottom", "load more")):
+        return [{"type": "evaluate", "value": "window.scrollTo(0, document.body.scrollHeight)"}]
+
+    if any(w in g for w in ("wait", "pause", "loading", "appear")):
+        return [{"type": "wait", "value": "1000"}, {"type": "screenshot"}]
+
+    if any(w in g for w in ("extract", "scrape", "get", "read", "find", "search", "locate", "fetch")):
+        return [
+            {"type": "evaluate", "value": "document.body ? document.body.innerText.slice(0,3000) : ''"},
+            {"type": "screenshot"},
+        ]
+
+    return [{"type": "screenshot"}, {"type": "evaluate", "value": "document.title"}]
+
+
+_default_plan = _heuristic_plan  # backward compat alias
+
+
+class ClaudeHaikuPlanner:
+    """
+    LLM-backed planner using Claude Haiku via Anthropic API.
+    Falls back to HeuristicPlanner when ANTHROPIC_API_KEY is not set.
+    """
+
+    def __call__(self, goal: str, page_url: str, page_snapshot: str) -> List[Dict[str, Any]]:
+        import os
+        api_key = os.environ.get("ANTHROPIC_API_KEY")
+        if not api_key:
+            return _heuristic_plan(goal, page_url, page_snapshot)
+        try:
+            import anthropic
+            client = anthropic.Anthropic(api_key=api_key)
+            prompt = (
+                f"You are a browser automation agent. Given the goal, current URL, and page HTML, "
+                f"output a JSON array of browser actions to take next.\n\n"
+                f"Goal: {goal}\nURL: {page_url}\nPage (truncated):\n{page_snapshot[:1500]}\n\n"
+                f"Available action types: navigate (value=url), click (value=css_selector), "
+                f"type (value=text), wait (value=ms), screenshot (no value), "
+                f"evaluate (value=js_expression).\n\n"
+                f"Respond with ONLY a JSON array, e.g.: "
+                f'[{{"type": "navigate", "value": "https://example.com"}}]'
+            )
+            msg = client.messages.create(
+                model="claude-haiku-4-5-20251001",
+                max_tokens=512,
+                messages=[{"role": "user", "content": prompt}],
+            )
+            import json as _json, re as _re
+            text_blocks = [b for b in msg.content if hasattr(b, "text")]
+            if not text_blocks:
+                return _heuristic_plan(goal, page_url, page_snapshot)
+            text = str(getattr(text_blocks[0], "text", "")).strip()
+            arr_match = _re.search(r"\[.*\]", text, _re.DOTALL)
+            if arr_match:
+                return _json.loads(arr_match.group())
+        except Exception:
+            pass
+        return _heuristic_plan(goal, page_url, page_snapshot)
 
 
 class AgentPlanner:
@@ -226,12 +309,10 @@ class AgentPlanner:
         def llm_plan(goal, url, snapshot):
             response = llm.complete(f"Goal: {goal}\nURL: {url}\nHTML: {snapshot[:2000]}")
             return json.loads(response)  # list of action dicts
-
-    For testing, the default plan_fn takes a screenshot and waits.
     """
 
     def __init__(self, plan_fn: Optional[ActionPlanFn] = None):
-        self._plan_fn = plan_fn or _default_plan
+        self._plan_fn = plan_fn or _heuristic_plan
 
     def plan(self, goal: str, page_url: str, page_snapshot: str) -> List[BrowserAction]:
         raw = self._plan_fn(goal, page_url, page_snapshot)

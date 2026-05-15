@@ -217,3 +217,123 @@ def test_crawlee_adapter_pool_none_by_default():
     from harvest_acquire.crawl.crawlee_adapter import CrawleeAdapter
     adapter = CrawleeAdapter()
     assert adapter._browser_pool is None
+
+
+# ---------------------------------------------------------------------------
+# error_threshold parameter and health_report()
+# ---------------------------------------------------------------------------
+
+def test_error_threshold_default():
+    pool = PlaywrightPool()
+    assert pool.error_threshold == 5
+
+
+def test_error_threshold_custom():
+    pool = PlaywrightPool(error_threshold=3)
+    assert pool.error_threshold == 3
+
+
+def test_health_report_healthy_no_errors():
+    pool = PlaywrightPool(error_threshold=5)
+    browser = MagicMock()
+    pool._slots.append(_BrowserSlot(browser=browser))
+    pool._open = True
+    report = pool.health_report()
+    assert report["status"] == "healthy"
+    assert report["active_browsers"] == 1
+    assert report["total_errors"] == 0
+    assert report["error_threshold"] == 5
+    assert report["recommendations"] == []
+
+
+def test_health_report_critical_no_active_browsers():
+    pool = PlaywrightPool(error_threshold=5)
+    pool._open = True
+    report = pool.health_report()
+    assert report["status"] == "critical"
+    assert report["active_browsers"] == 0
+    assert "Pool exhausted — increase max_browsers" in report["recommendations"]
+
+
+def test_health_report_degraded_when_errors_at_half_threshold():
+    pool = PlaywrightPool(error_threshold=4)
+    browser = MagicMock()
+    slot = _BrowserSlot(browser=browser)
+    slot.error_count = 2  # == threshold / 2
+    pool._slots.append(slot)
+    pool._open = True
+    report = pool.health_report()
+    assert report["status"] == "degraded"
+
+
+def test_health_report_includes_browser_error_recommendation():
+    pool = PlaywrightPool(error_threshold=5)
+    browser = MagicMock()
+    slot = _BrowserSlot(browser=browser)
+    slot.error_count = 2
+    pool._slots.append(slot)
+    pool._open = True
+    report = pool.health_report()
+    assert any("Browser #0" in r and "2 errors" in r for r in report["recommendations"])
+
+
+def test_health_report_healthy_below_half_threshold():
+    pool = PlaywrightPool(error_threshold=10)
+    browser = MagicMock()
+    slot = _BrowserSlot(browser=browser)
+    slot.error_count = 4  # < 10/2 = 5
+    pool._slots.append(slot)
+    pool._open = True
+    report = pool.health_report()
+    assert report["status"] == "healthy"
+
+
+def test_health_report_browsers_list_structure():
+    pool = PlaywrightPool(error_threshold=5)
+    browser = MagicMock()
+    pool._slots.append(_BrowserSlot(browser=browser))
+    pool._open = True
+    report = pool.health_report()
+    assert len(report["browsers"]) == 1
+    b = report["browsers"][0]
+    assert "index" in b
+    assert "state" in b
+    assert "pages_served" in b
+    assert "error_count" in b
+
+
+@pytest.mark.asyncio
+async def test_release_page_increments_error_count_on_close_failure():
+    browser, page = _make_mock_browser()
+    page.close = AsyncMock(side_effect=RuntimeError("crash"))
+    pw = _make_mock_playwright(browser)
+
+    pool = PlaywrightPool(error_threshold=5)
+    pool._playwright = pw
+    pool._open = True
+
+    slot = _BrowserSlot(browser=browser)
+    pool._slots.append(slot)
+    page._harvest_slot = slot
+
+    await pool._release_page(page)
+    assert slot.error_count == 1
+
+
+@pytest.mark.asyncio
+async def test_release_page_retires_slot_at_error_threshold():
+    browser, page = _make_mock_browser()
+    page.close = AsyncMock(side_effect=RuntimeError("crash"))
+    pw = _make_mock_playwright(browser)
+
+    pool = PlaywrightPool(error_threshold=3)
+    pool._playwright = pw
+    pool._open = True
+
+    slot = _BrowserSlot(browser=browser)
+    slot.error_count = 2  # one more will hit threshold
+    pool._slots.append(slot)
+    page._harvest_slot = slot
+
+    await pool._release_page(page)
+    assert slot.state == "retired"

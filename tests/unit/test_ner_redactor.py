@@ -7,8 +7,9 @@ from harvest_core.rights.ner_redactor import (
     NERRedactor,
     NERFinding,
     NERRedactorResult,
+    PresidioRedactor,
 )
-from harvest_core.rights.redaction_scanner import ScanResult
+from harvest_core.rights.redaction_scanner import RedactionScanner, ScanResult
 
 
 # ---------------------------------------------------------------------------
@@ -200,3 +201,102 @@ def test_redact_no_findings_returns_unchanged():
         result = redactor.redact(text)
 
     assert result == text
+
+
+# ---------------------------------------------------------------------------
+# Extended regex patterns
+# ---------------------------------------------------------------------------
+
+def test_redaction_scanner_extended_patterns_anthropic_key():
+    scanner = RedactionScanner()
+    text = "key = sk-ant-api03-abcdefghijklmnopqrstuvwxyz1234567890"
+    result = scanner.scan(text)
+    names = [f.pattern_name for f in result.findings]
+    assert "anthropic_api_key" in names
+
+
+def test_redaction_scanner_extended_patterns_openai_key():
+    scanner = RedactionScanner()
+    text = "OPENAI_API_KEY=sk-abcdefghijklmnopqrstuv"
+    result = scanner.scan(text)
+    names = [f.pattern_name for f in result.findings]
+    assert "openai_api_key" in names
+
+
+def test_redaction_scanner_uk_nino():
+    scanner = RedactionScanner()
+    text = "National Insurance number: AB 12 34 56 C"
+    result = scanner.scan(text)
+    names = [f.pattern_name for f in result.findings]
+    assert "uk_nino" in names
+    assert any(f.category == "pii" for f in result.findings if f.pattern_name == "uk_nino")
+
+
+# ---------------------------------------------------------------------------
+# PresidioRedactor
+# ---------------------------------------------------------------------------
+
+def test_presidio_redactor_falls_back_when_unavailable():
+    redactor = PresidioRedactor()
+    assert redactor._presidio_available is False
+    result = redactor.analyze("Contact john@example.com for details.")
+    assert isinstance(result, NERRedactorResult)
+
+
+def test_presidio_redactor_presidio_available_property():
+    redactor = PresidioRedactor()
+    assert isinstance(redactor.presidio_available, bool)
+
+
+def test_ner_redactor_result_spacy_available_false_path():
+    from harvest_core.rights.ner_redactor import NormalizationError
+    redactor = NERRedactor()
+    with patch.object(redactor, "_load_nlp", side_effect=NormalizationError("no spacy")):
+        result = redactor.scan("My SSN is 123-45-6789")
+    assert result.spacy_available is False
+    assert isinstance(result.redaction_required, bool)
+
+
+# ---------------------------------------------------------------------------
+# New scanner pattern tests
+# ---------------------------------------------------------------------------
+
+def test_redaction_scanner_detects_anthropic_key():
+    from harvest_core.rights.redaction_scanner import RedactionScanner
+    scanner = RedactionScanner()
+    result = scanner.scan("key = sk-ant-api03-abcdefghijklmnopqrstuvwx12345678")
+    assert result.secret_count >= 1
+
+
+def test_redaction_scanner_detects_openai_key():
+    from harvest_core.rights.redaction_scanner import RedactionScanner
+    scanner = RedactionScanner()
+    result = scanner.scan("OPENAI_API_KEY=sk-abcdefghijklmnopqrstuvwxyz123456")
+    assert result.secret_count >= 1
+
+
+def test_redaction_scanner_detects_uk_nino():
+    from harvest_core.rights.redaction_scanner import RedactionScanner
+    scanner = RedactionScanner()
+    result = scanner.scan("National Insurance number: AB 12 34 56 C")
+    assert result.pii_count >= 1
+
+
+def test_redaction_scanner_detects_dob():
+    from harvest_core.rights.redaction_scanner import RedactionScanner
+    scanner = RedactionScanner()
+    result = scanner.scan("DOB: 15/03/1985 patient info")
+    assert result.pii_count >= 1
+
+
+def test_presidio_redactor_falls_back_when_unavailable():
+    from harvest_core.rights.ner_redactor import PresidioRedactor
+    p = PresidioRedactor()
+    result = p.analyze("Contact John Smith at john@example.com")
+    assert result is not None
+
+
+def test_presidio_redactor_presidio_available_is_bool():
+    from harvest_core.rights.ner_redactor import PresidioRedactor
+    p = PresidioRedactor()
+    assert isinstance(p.presidio_available, bool)

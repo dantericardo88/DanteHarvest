@@ -8,13 +8,17 @@ Import paths updated for DANTEHARVEST package layout.
 from __future__ import annotations
 
 import hashlib
-from datetime import datetime
+import io
+from datetime import datetime, timezone
 from types import SimpleNamespace
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 try:
     import cv2  # type: ignore
+    _CV2_AVAILABLE = True
 except ImportError:
+    _CV2_AVAILABLE = False
+
     class _UnavailableVideoCapture:
         def __init__(self, *_args, **_kwargs):
             self._opened = False
@@ -26,7 +30,16 @@ except ImportError:
             return 0.0
         def release(self) -> None:
             return None
+
     cv2 = SimpleNamespace(CAP_PROP_FPS=5, VideoCapture=_UnavailableVideoCapture)  # type: ignore
+
+
+def _imageio_available() -> bool:
+    try:
+        import imageio  # noqa: F401
+        return True
+    except ImportError:
+        return False
 
 
 class KeyframeExtractionError(Exception):
@@ -56,6 +69,113 @@ def _open_capture(video_path: str):
     return capture
 
 
+def _utcnow() -> str:
+    return datetime.now(timezone.utc).isoformat()
+
+
+class _ImageIOVideoReader:
+    """Read video frames using imageio (imageio-ffmpeg backend)."""
+
+    def __init__(self, video_path: str):
+        import imageio
+        self._reader: Any = imageio.get_reader(video_path)
+        meta = self._reader.get_meta_data()
+        self._fps = float(meta.get("fps", 25.0)) or 25.0
+        self._path = video_path
+
+    @property
+    def fps(self) -> float:
+        return self._fps
+
+    def read_frame(self) -> Optional[bytes]:
+        """Read next frame, return as PNG bytes or None on end."""
+        try:
+            frame = next(self._reader)
+            from PIL import Image
+            img = Image.fromarray(frame)
+            buf = io.BytesIO()
+            img.save(buf, format="PNG")
+            return buf.getvalue()
+        except StopIteration:
+            return None
+        except Exception:
+            return None
+
+    def release(self) -> None:
+        try:
+            self._reader.close()
+        except Exception:
+            pass
+
+
+def backend_available() -> str:
+    """Return which video backend is available: 'cv2', 'imageio', or 'none'."""
+    if _CV2_AVAILABLE:
+        return "cv2"
+    if _imageio_available():
+        return "imageio"
+    return "none"
+
+
+def _extract_keyframes_cv2(
+    video_path: str, interval: int, max_frames: int
+) -> List[Dict[str, Any]]:
+    capture = _open_capture(video_path)
+    frames: List[Dict[str, Any]] = []
+    fps = float(capture.get(getattr(cv2, "CAP_PROP_FPS", 5)) or 0.0)
+    frame_num = 0
+
+    try:
+        while len(frames) < max_frames:
+            success, frame = capture.read()
+            if not success:
+                break
+            if frame_num % interval == 0:
+                data = _frame_bytes(frame)
+                frames.append({
+                    "frame_num": frame_num,
+                    "frame_data": data,
+                    "hash": compute_frame_hash(data),
+                    "timestamp": (frame_num / fps) if fps > 0 else 0.0,
+                    "video_path": video_path,
+                    "extracted_at": _utcnow(),
+                })
+            frame_num += 1
+    finally:
+        capture.release()
+
+    return frames
+
+
+def _extract_keyframes_imageio(
+    video_path: str, interval: int, max_frames: int
+) -> List[Dict[str, Any]]:
+    reader = _ImageIOVideoReader(video_path)
+    frames: List[Dict[str, Any]] = []
+    fps = reader.fps
+    frame_num = 0
+
+    try:
+        while len(frames) < max_frames:
+            data = reader.read_frame()
+            if data is None:
+                break
+            if frame_num % interval == 0:
+                frames.append({
+                    "frame_num": frame_num,
+                    "frame_data": data,
+                    "hash": compute_frame_hash(data),
+                    "timestamp": (frame_num / fps) if fps > 0 else 0.0,
+                    "video_path": video_path,
+                    "extracted_at": _utcnow(),
+                })
+            frame_num += 1
+    finally:
+        reader.release()
+
+    return frames
+
+
 def extract_keyframes(
     video_path: str, interval: int = 10, max_frames: int = 50
 ) -> List[Dict[str, Any]]:
@@ -75,31 +195,16 @@ def extract_keyframes(
     if max_frames <= 0:
         return []
 
-    capture = _open_capture(video_path)
-    frames: List[Dict[str, Any]] = []
-    fps = float(capture.get(getattr(cv2, "CAP_PROP_FPS", 5)) or 0.0)
-    frame_num = 0
+    if _CV2_AVAILABLE:
+        return _extract_keyframes_cv2(video_path, interval, max_frames)
 
-    try:
-        while len(frames) < max_frames:
-            success, frame = capture.read()
-            if not success:
-                break
-            if frame_num % interval == 0:
-                data = _frame_bytes(frame)
-                frames.append({
-                    "frame_num": frame_num,
-                    "frame_data": data,
-                    "hash": compute_frame_hash(data),
-                    "timestamp": (frame_num / fps) if fps > 0 else 0.0,
-                    "video_path": video_path,
-                    "extracted_at": datetime.utcnow().isoformat(),
-                })
-            frame_num += 1
-    finally:
-        capture.release()
+    if _imageio_available():
+        return _extract_keyframes_imageio(video_path, interval, max_frames)
 
-    return frames
+    raise KeyframeExtractionError(
+        "No video backend available. Install cv2: pip install opencv-python  "
+        "or imageio: pip install imageio imageio-ffmpeg Pillow"
+    )
 
 
 def extract_keyframe_hashes(

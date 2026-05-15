@@ -53,6 +53,7 @@ class ExtractRequest(_BM):
     use_js_rendering: bool = False
     webhook_url: Optional[str] = None
     proxy_url: Optional[str] = None
+    local_extraction_mode: bool = False
 
 
 class CrawlRequest(_BM):
@@ -71,6 +72,7 @@ class DomainExtractRequest(_BM):
     use_js_rendering: bool = False
     webhook_url: Optional[str] = None
     proxy_url: Optional[str] = None
+    local_extraction_mode: bool = False
 
 
 # ---------------------------------------------------------------------------
@@ -107,30 +109,81 @@ async def _run_extract(job_id: str, req_data: dict, store: JobStore) -> None:
             return
         markdown = result.pages[0].markdown
         schema_prompt = req_data.get("schema_prompt")
-        extracted = await _llm_extract(markdown, schema_prompt)
+        if req_data.get("local_extraction_mode") and schema_prompt:
+            extracted = _rule_based_extract(markdown, schema_prompt)
+        else:
+            extracted = await _llm_extract(markdown, schema_prompt)
         store.update(job_id, status="completed", result=extracted)
     except Exception as e:
         store.update(job_id, status="failed", error=str(e))
 
 
+def _rule_based_extract(markdown: str, schema_prompt: str) -> Dict[str, Any]:
+    import re as _re
+    prompt_lower = schema_prompt.lower()
+    result: Dict[str, Any] = {}
+
+    if any(k in prompt_lower for k in ("price", "product", "sku", "ecommerce")):
+        price_m = _re.search(r"\$\s*(\d+(?:\.\d{2})?)", markdown)
+        if price_m:
+            result["price"] = float(price_m.group(1))
+            result["currency"] = "USD"
+        sku_m = _re.search(r"(?i)\b(?:sku|item\s*#?|model\s*#?)[:\s]+([A-Z0-9\-]{4,20})\b", markdown)
+        if sku_m:
+            result["sku"] = sku_m.group(1)
+        name_m = _re.search(r"^#+\s*(.+)$", markdown, _re.MULTILINE)
+        if name_m:
+            result["product_name"] = name_m.group(1).strip()
+        if "in stock" in markdown.lower() or "add to cart" in markdown.lower():
+            result["availability"] = "in_stock"
+        elif "out of stock" in markdown.lower() or "sold out" in markdown.lower():
+            result["availability"] = "out_of_stock"
+
+    if any(k in prompt_lower for k in ("headline", "author", "article", "news", "published")):
+        headline_m = _re.search(r"^#+\s*(.+)$", markdown, _re.MULTILINE)
+        if headline_m:
+            result["headline"] = headline_m.group(1).strip()
+        author_m = _re.search(r"(?i)(?:by|author)[:\s]+([A-Z][a-z]+ [A-Z][a-z]+)", markdown)
+        if author_m:
+            result["author"] = [author_m.group(1)]
+        date_m = _re.search(r"\b(\d{4}-\d{2}-\d{2}|\w+ \d{1,2},?\s+\d{4})\b", markdown)
+        if date_m:
+            result["published_date"] = date_m.group(1)
+
+    if any(k in prompt_lower for k in ("case", "court", "legal", "citation", "plaintiff", "defendant")):
+        case_m = _re.search(r"(?i)([A-Z][a-zA-Z\s]+ v\.? [A-Z][a-zA-Z\s]+)", markdown)
+        if case_m:
+            result["case_name"] = case_m.group(1).strip()
+        court_m = _re.search(r"(?i)(supreme court|court of appeals|district court|circuit court)", markdown)
+        if court_m:
+            result["court"] = court_m.group(1)
+
+    for m in _re.finditer(r"(?m)^([A-Za-z][A-Za-z\s]{2,30}):\s*(.{1,200})$", markdown):
+        key = m.group(1).strip().lower().replace(" ", "_")
+        val = m.group(2).strip()
+        if key not in result and len(key) <= 40:
+            result[key] = val
+
+    result["_extraction_mode"] = "rule_based"
+    return result
+
+
 async def _llm_extract(markdown: str, schema_prompt: Optional[str]) -> Dict[str, Any]:
     if not schema_prompt:
         return {"markdown": markdown}
+
     try:
         import anthropic
         client = anthropic.Anthropic()
         msg = client.messages.create(
             model="claude-haiku-4-5-20251001",
             max_tokens=2048,
-            messages=[{
-                "role": "user",
-                "content": (
-                    f"Extract structured data from the following content.\n"
-                    f"Schema/instructions: {schema_prompt}\n\n"
-                    f"Content:\n{markdown[:8000]}\n\n"
-                    "Respond with valid JSON only."
-                ),
-            }],
+            messages=[{"role": "user", "content": (
+                f"Extract structured data from the following content.\n"
+                f"Schema/instructions: {schema_prompt}\n\n"
+                f"Content:\n{markdown[:8000]}\n\n"
+                "Respond with valid JSON only."
+            )}],
         )
         import json
         text = msg.content[0].text.strip()
@@ -138,9 +191,13 @@ async def _llm_extract(markdown: str, schema_prompt: Optional[str]) -> Dict[str,
             text = text.split("```")[1]
             if text.startswith("json"):
                 text = text[4:]
-        return json.loads(text)
-    except Exception as e:
-        return {"markdown": markdown, "extraction_error": str(e)}
+        result = json.loads(text)
+        result["_extraction_mode"] = "llm"
+        return result
+    except Exception:
+        pass
+
+    return _rule_based_extract(markdown, schema_prompt)
 
 
 async def _fire_webhook(webhook_url: Optional[str], job_id: str, status: str, result: Any) -> None:

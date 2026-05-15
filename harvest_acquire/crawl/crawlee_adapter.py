@@ -197,6 +197,7 @@ _WAIT_STRATEGIES = ("networkidle", "domcontentloaded", "load", "commit")
 _SPA_MARKERS = (
     "react", "vue", "angular", "__NEXT_DATA__", "ng-version",
     "data-reactroot", "data-v-", "_nuxt", "svelte", "ember",
+    "v-cloak",
 )
 
 
@@ -313,6 +314,75 @@ async def _fetch_url_playwright(
     return html, status_code
 
 
+def _fetch_url_spa_enhanced(
+    url: str,
+    timeout: int = 10,
+    proxy_url: Optional[str] = None,
+    use_stealth_headers: bool = False,
+) -> tuple[str, int]:
+    """HTTP fetch with SPA-aware enrichment: extracts embedded JSON blobs, meta tags,
+    JSON-LD, and framework data stores that plain HTTP would otherwise discard."""
+    html, status = _fetch_url(url, timeout=timeout, proxy_url=proxy_url, use_stealth_headers=use_stealth_headers)
+    if status >= 400 or not html:
+        return html, status
+
+    parts: List[str] = []
+
+    # Strip scripts/styles for base text (more aggressive than _html_to_markdown fallback)
+    base = re.sub(r"<script[^>]*>.*?</script>", "", html, flags=re.DOTALL | re.IGNORECASE)
+    base = re.sub(r"<style[^>]*>.*?</style>", "", base, flags=re.DOTALL | re.IGNORECASE)
+    base = re.sub(r"<!--.*?-->", "", base, flags=re.DOTALL)
+    base = re.sub(r"<[^>]+>", " ", base)
+    base = re.sub(r"\s+", " ", base).strip()
+    if base:
+        parts.append(base)
+
+    # JSON-LD blocks
+    for block in re.findall(
+        r'<script[^>]+type=["\']application/ld\+json["\'][^>]*>(.*?)</script>',
+        html, flags=re.DOTALL | re.IGNORECASE,
+    ):
+        block = block.strip()
+        if block:
+            parts.append("JSON-LD: " + block)
+
+    # <script type="application/json"> blocks (non-ld+json)
+    for block in re.findall(
+        r'<script[^>]+type=["\']application/json["\'][^>]*>(.*?)</script>',
+        html, flags=re.DOTALL | re.IGNORECASE,
+    ):
+        block = block.strip()
+        if block:
+            parts.append("JSON-DATA: " + block)
+
+    # Framework data stores embedded in JS
+    for var, pattern in (
+        ("__NEXT_DATA__", r'__NEXT_DATA__\s*=\s*(\{.*?\})\s*(?:;|</script>)'),
+        ("__INITIAL_STATE__", r'__INITIAL_STATE__\s*=\s*(\{.*?\})\s*(?:;|</script>)'),
+        ("__PRELOADED_STATE__", r'__PRELOADED_STATE__\s*=\s*(\{.*?\})\s*(?:;|</script>)'),
+    ):
+        m = re.search(pattern, html, flags=re.DOTALL)
+        if m:
+            parts.append(f"{var}: " + m.group(1)[:4096])
+
+    # Meta tags
+    meta_parts: List[str] = []
+    for m in re.finditer(
+        r'<meta\s+(?:[^>]*?\s+)?(?:property|name)=["\']([^"\']+)["\'][^>]*content=["\']([^"\']*)["\']',
+        html, flags=re.IGNORECASE,
+    ):
+        meta_parts.append(f"{m.group(1)}: {m.group(2)}")
+    for m in re.finditer(
+        r'<meta\s+(?:[^>]*?\s+)?content=["\']([^"\']*)["\'][^>]*(?:property|name)=["\']([^"\']+)["\']',
+        html, flags=re.IGNORECASE,
+    ):
+        meta_parts.append(f"{m.group(2)}: {m.group(1)}")
+    if meta_parts:
+        parts.append("META: " + " | ".join(meta_parts))
+
+    return "\n\n".join(parts), status
+
+
 def _is_playwright_available() -> bool:
     try:
         import playwright  # noqa: F401
@@ -352,8 +422,10 @@ class CrawleeAdapter:
         extra_wait_ms: int = 0,
         rate_limiter: Optional[Any] = None,
         default_rps: float = 1.0,
+        auto_spa_detection: bool = True,
     ):
         self._use_js = use_js_rendering and _is_playwright_available()
+        self._auto_spa = auto_spa_detection
         self.chain_writer = chain_writer
         self.storage_root = Path(storage_root)
         self._browser_pool = browser_pool  # optional PlaywrightPool
@@ -382,7 +454,11 @@ class CrawleeAdapter:
 
     @property
     def rendering_mode(self) -> str:
-        return "playwright" if self._use_js else "http"
+        if self._use_js:
+            return "playwright"
+        if self._auto_spa:
+            return "http_spa"
+        return "http"
 
     async def _fetch_with_retry(
         self,
@@ -433,6 +509,22 @@ class CrawleeAdapter:
                 spa_mode=self._spa_mode,
                 extra_wait_ms=self._extra_wait_ms,
             )
+        if self._auto_spa:
+            html, status = _fetch_url(url, proxy_url=self._proxy_url, use_stealth_headers=self._stealth)
+            if status < 400 and _auto_detect_spa(html):
+                if _is_playwright_available():
+                    return await _fetch_url_playwright(
+                        url,
+                        wait_until=self._wait_until,
+                        spa_mode=True,
+                        extra_wait_ms=self._extra_wait_ms,
+                    )
+                return _fetch_url_spa_enhanced(
+                    url,
+                    proxy_url=self._proxy_url,
+                    use_stealth_headers=self._stealth,
+                )
+            return html, status
         return _fetch_url(url, proxy_url=self._proxy_url, use_stealth_headers=self._stealth)
 
     async def crawl(  # noqa: PLR0912

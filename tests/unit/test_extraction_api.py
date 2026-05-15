@@ -333,3 +333,48 @@ async def test_run_extract_no_schema_returns_markdown(tmp_path):
     assert updated.status == "completed"
     assert isinstance(updated.result, dict)
     assert updated.result.get("markdown") == "Content here"
+
+
+# ---------------------------------------------------------------------------
+# _rule_based_extract tests
+# ---------------------------------------------------------------------------
+
+def test_rule_based_extract_ecommerce_price():
+    from harvest_ui.api.extraction_api import _rule_based_extract
+    md = "# Widget Pro\nPrice: $29.99\nSKU: WGT-001\nAdd to cart"
+    result = _rule_based_extract(md, "Extract price, product, sku, ecommerce fields")
+    assert result["price"] == 29.99
+    assert result["currency"] == "USD"
+
+
+def test_rule_based_extract_news_headline():
+    from harvest_ui.api.extraction_api import _rule_based_extract
+    md = "# Breaking News Article\nBy Jane Smith\n2024-01-15\nContent here."
+    result = _rule_based_extract(md, "Extract headline, author, published date from news article")
+    assert "headline" in result
+    assert result["headline"] == "Breaking News Article"
+
+
+def test_rule_based_extract_marks_extraction_mode():
+    from harvest_ui.api.extraction_api import _rule_based_extract
+    result = _rule_based_extract("Some content", "Extract product price sku ecommerce")
+    assert result["_extraction_mode"] == "rule_based"
+
+
+def test_rule_based_extract_generic_keyvalue():
+    from harvest_ui.api.extraction_api import _rule_based_extract
+    md = "Title: My Document\nStatus: Active\nOwner: Alice"
+    result = _rule_based_extract(md, "Extract any fields")
+    assert result.get("title") == "My Document" or result.get("status") == "Active"
+
+
+@pytest.mark.asyncio
+async def test_llm_extract_falls_back_to_rule_based_when_anthropic_fails():
+    from harvest_ui.api.extraction_api import _llm_extract
+    with patch("anthropic.Anthropic", side_effect=Exception("no api key")):
+        result = await _llm_extract(
+            "# Laptop X1\nPrice: $999.00\nAdd to cart",
+            "Extract price, product, sku, ecommerce data",
+        )
+    assert result["_extraction_mode"] == "rule_based"
+    assert result["price"] == 999.0

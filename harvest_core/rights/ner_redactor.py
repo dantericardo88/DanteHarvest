@@ -12,7 +12,7 @@ Harvested from: spaCy EntityRuler patterns + Presidio context-aware approach.
 
 Constitutional guarantees:
 - Local-first: spaCy runs locally; no network calls
-- Fail-closed: spaCy unavailable raises NormalizationError; scanner never silently skips
+- Fail-open: spaCy unavailable falls back to regex-only; scanner never silently skips
 - Layered: NER findings stack on top of regex findings from RedactionScanner
 - Zero-ambiguity: NERRedactorResult.redaction_required is always bool
 """
@@ -58,6 +58,7 @@ class NERRedactorResult:
     regex_result: ScanResult
     ner_findings: List[NERFinding] = field(default_factory=list)
     spacy_available: bool = True
+    presidio_available: bool = False
 
     @property
     def redaction_required(self) -> bool:
@@ -68,6 +69,27 @@ class NERRedactorResult:
     @property
     def all_findings_count(self) -> int:
         return len(self.regex_result.findings) + len(self.ner_findings)
+
+    def redacted_text(self, text: str, replacement: str = "[REDACTED]") -> str:
+        intervals: List[Tuple[int, int]] = []
+        for f in self.regex_result.findings:
+            intervals.append((f.match_start, f.match_end))
+        for f in self.ner_findings:
+            if f.context_pii or f.entity_type in _ALWAYS_REDACT:
+                intervals.append((f.start, f.end))
+        if not intervals:
+            return text
+        intervals.sort(key=lambda x: x[0])
+        merged: List[Tuple[int, int]] = []
+        for start, end in intervals:
+            if merged and start <= merged[-1][1]:
+                merged[-1] = (merged[-1][0], max(merged[-1][1], end))
+            else:
+                merged.append((start, end))
+        chars = list(text)
+        for start, end in reversed(merged):
+            chars[start:end] = list(replacement)
+        return "".join(chars)
 
     def summary(self) -> str:
         parts = []
@@ -202,6 +224,10 @@ class NERRedactor:
             chars[start:end] = list(replacement)
         return "".join(chars)
 
+    def redact_with_result(self, text: str) -> "NERRedactorResult":
+        """Scan and return the NERRedactorResult (used by PresidioRedactor fallback)."""
+        return self.scan(text)
+
     def redact_file(self, path, replacement: str = "[REDACTED]") -> str:
         """Read a text file, redact PII, return redacted text."""
         from pathlib import Path
@@ -211,3 +237,73 @@ class NERRedactor:
         except OSError as e:
             raise NormalizationError(f"NERRedactor cannot read {path}: {e}") from e
         return self.redact(text, replacement=replacement)
+
+
+class PresidioRedactor:
+    """
+    Presidio-analyzer backed PII detector. Falls back to NERRedactor when
+    presidio-analyzer is not installed (local-first guarantee).
+    """
+
+    def __init__(self):
+        self._presidio_available = False
+        self._analyzer = None
+        try:
+            from presidio_analyzer import AnalyzerEngine
+            self._analyzer = AnalyzerEngine()
+            self._presidio_available = True
+        except ImportError:
+            pass
+        self._fallback = NERRedactor()
+
+    @property
+    def presidio_available(self) -> bool:
+        return self._presidio_available
+
+    def analyze(self, text: str, language: str = "en") -> NERRedactorResult:
+        if not self._presidio_available or self._analyzer is None:
+            return self._fallback.redact_with_result(text)
+        try:
+            results = self._analyzer.analyze(text=text, language=language)
+            regex_result = RedactionScanner().scan(text)
+            ner_findings = [
+                NERFinding(
+                    entity_type=r.entity_type,
+                    text=text[r.start:r.end],
+                    start=r.start,
+                    end=r.end,
+                    context_pii=True,
+                    confidence=float(r.score),
+                )
+                for r in results
+            ]
+            return NERRedactorResult(
+                regex_result=regex_result,
+                ner_findings=ner_findings,
+                spacy_available=False,
+                presidio_available=True,
+            )
+        except Exception:
+            return self._fallback.redact_with_result(text)
+
+    def redact(self, text: str, replacement: str = "[REDACTED]") -> str:
+        result = self.analyze(text)
+        intervals: List[Tuple[int, int]] = []
+        for f in result.regex_result.findings:
+            intervals.append((f.match_start, f.match_end))
+        for f in result.ner_findings:
+            if f.context_pii or f.entity_type in _ALWAYS_REDACT:
+                intervals.append((f.start, f.end))
+        if not intervals:
+            return text
+        intervals.sort(key=lambda x: x[0])
+        merged: List[Tuple[int, int]] = []
+        for start, end in intervals:
+            if merged and start <= merged[-1][1]:
+                merged[-1] = (merged[-1][0], max(merged[-1][1], end))
+            else:
+                merged.append((start, end))
+        chars = list(text)
+        for start, end in reversed(merged):
+            chars[start:end] = list(replacement)
+        return "".join(chars)

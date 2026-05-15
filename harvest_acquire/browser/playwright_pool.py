@@ -219,6 +219,7 @@ class PlaywrightPool:
         headless: bool = True,
         proxy_url: Optional[str] = None,
         fingerprint_profile: Optional[str] = None,  # key from DEVICE_PROFILES, or None for random
+        error_threshold: int = 5,
         pre_launch: Optional[Hook] = None,
         post_launch: Optional[Hook] = None,
         pre_page_create: Optional[Hook] = None,
@@ -233,6 +234,7 @@ class PlaywrightPool:
         self.headless = headless
         self.proxy_url = proxy_url
         self.fingerprint_profile = fingerprint_profile  # None = rotate randomly per browser
+        self.error_threshold = error_threshold
 
         self._hooks: Dict[str, Optional[Hook]] = {
             "pre_launch": pre_launch,
@@ -315,15 +317,26 @@ class PlaywrightPool:
                 page = await slot.browser.new_page()
             slot.pages_served += 1
             slot.last_active = time.time()
+            page._harvest_slot = slot
             await self._call_hook("post_page_create", pool=self, page=page)
             return page
 
     async def _release_page(self, page: Any) -> None:
         await self._call_hook("pre_page_close", pool=self, page=page)
+        slot: Optional[_BrowserSlot] = getattr(page, "_harvest_slot", None)
         try:
             await page.close()
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.warning("PlaywrightPool: page.close() failed: %s", exc)
+            if slot is not None:
+                slot.error_count += 1
+                if slot.error_count >= self.error_threshold:
+                    slot.state = "retired"
+                    logger.warning(
+                        "PlaywrightPool: browser retired after %d errors (threshold=%d)",
+                        slot.error_count,
+                        self.error_threshold,
+                    )
         await self._call_hook("post_page_close", pool=self)
         await self._retire_stale_slots()
 
@@ -375,6 +388,8 @@ class PlaywrightPool:
             if slot.pages_served >= self.retire_after_pages:
                 slot.state = "retired"
             elif now - slot.last_active > self.idle_close_secs:
+                slot.state = "retired"
+            elif slot.error_count >= self.error_threshold:
                 slot.state = "retired"
         for slot in [s for s in self._slots if s.state == "retired"]:
             try:
@@ -430,6 +445,49 @@ class PlaywrightPool:
             "active_count": sum(1 for s in self._slots if s.state == "active"),
             "total_errors": sum(s.error_count for s in self._slots),
             "browsers": browsers,
+        }
+
+    def health_report(self) -> Dict[str, Any]:
+        """Structured health report with status, per-browser detail, and recommendations."""
+        active_slots = [s for s in self._slots if s.state == "active"]
+        active_count = len(active_slots)
+        total_errors = sum(s.error_count for s in self._slots)
+        half_threshold = self.error_threshold / 2
+
+        browsers = []
+        for i, slot in enumerate(self._slots):
+            browsers.append({
+                "index": i,
+                "state": slot.state,
+                "pages_served": slot.pages_served,
+                "error_count": slot.error_count,
+                "uptime_secs": slot.uptime_secs(),
+                "idle_secs": slot.idle_secs(),
+            })
+
+        recommendations: List[str] = []
+        for i, slot in enumerate(self._slots):
+            if slot.error_count > 0:
+                recommendations.append(
+                    f"Browser #{i} has high error rate ({slot.error_count} errors) — consider restart"
+                )
+        if active_count == 0:
+            recommendations.append("Pool exhausted — increase max_browsers")
+
+        if active_count == 0:
+            status = "critical"
+        elif any(s.error_count >= half_threshold for s in active_slots):
+            status = "degraded"
+        else:
+            status = "healthy"
+
+        return {
+            "status": status,
+            "active_browsers": active_count,
+            "total_errors": total_errors,
+            "error_threshold": self.error_threshold,
+            "browsers": browsers,
+            "recommendations": recommendations,
         }
 
     async def warmup(self, n: int = 1) -> int:

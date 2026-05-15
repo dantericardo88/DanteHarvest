@@ -11,6 +11,8 @@ from harvest_acquire.browser.agent_session import (
     AgentPlanner,
     AgentSessionRunner,
     _default_plan,
+    _heuristic_plan,
+    ClaudeHaikuPlanner,
 )
 
 
@@ -265,3 +267,63 @@ async def test_runner_advances_subtasks():
     result = await runner.run()
     # Empty plan on first subtask → advance → empty on second → completed
     assert result.status == AgentSessionStatus.COMPLETED
+
+
+# ---------------------------------------------------------------------------
+# HeuristicPlanner
+# ---------------------------------------------------------------------------
+
+def test_heuristic_plan_navigate_from_url_in_goal():
+    actions = _heuristic_plan("go to https://example.com/page", "", "")
+    assert len(actions) == 1
+    assert actions[0]["type"] == "navigate"
+    assert actions[0]["value"] == "https://example.com/page"
+
+
+def test_heuristic_plan_click_intent():
+    actions = _heuristic_plan("click the submit button", "", "")
+    assert len(actions) >= 1
+    assert actions[0]["type"] == "click"
+
+
+def test_heuristic_plan_type_intent():
+    actions = _heuristic_plan('type "hello world" into the search box', "", "")
+    assert len(actions) >= 1
+    assert actions[0]["type"] == "type"
+    assert actions[0]["value"] == "hello world"
+
+
+def test_heuristic_plan_scroll_intent():
+    actions = _heuristic_plan("scroll down to the bottom", "", "")
+    assert len(actions) >= 1
+    assert actions[0]["type"] == "evaluate"
+    assert "scrollTo" in actions[0]["value"]
+
+
+def test_heuristic_plan_extract_intent():
+    actions = _heuristic_plan("extract all prices from the page", "", "")
+    assert len(actions) >= 1
+    assert actions[0]["type"] == "evaluate"
+    assert "innerText" in actions[0]["value"]
+
+
+def test_heuristic_plan_default_returns_screenshot():
+    actions = _heuristic_plan("zap the frobnitz", "", "")
+    types = [a["type"] for a in actions]
+    assert "screenshot" in types
+
+
+def test_agent_planner_defaults_to_heuristic():
+    planner = AgentPlanner()
+    actions = planner.plan("click the login button", "https://example.com", "<html></html>")
+    assert len(actions) >= 1
+    assert actions[0].type.value == "click"
+
+
+def test_claude_haiku_planner_falls_back_without_api_key(monkeypatch):
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    haiku = ClaudeHaikuPlanner()
+    actions = haiku("scroll down the page", "https://example.com", "<html></html>")
+    assert len(actions) >= 1
+    assert isinstance(actions, list)
+    assert "type" in actions[0]
