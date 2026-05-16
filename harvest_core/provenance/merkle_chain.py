@@ -194,7 +194,9 @@ class MerkleChainManifest:
             raise ChainError(f"Manifest not found: {self.manifest_path}")
         with open(self.manifest_path, encoding="utf-8") as f:
             data = json.load(f)
-        return MerkleManifest.from_dict(data)
+        # Strip extension fields (e.g. _signature) before constructing the dataclass
+        clean = {k: v for k, v in data.items() if not k.startswith("_")}
+        return MerkleManifest.from_dict(clean)
 
     def is_sealed(self) -> bool:
         """Return True if a manifest sidecar exists."""

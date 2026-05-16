@@ -111,7 +111,102 @@ class RightsAwarePromoter:
         self._pack_artifacts: Dict[str, List[str]] = self._load_artifacts_index()
         self._audit_log = audit_log  # optional structured audit log with .record()
         self._failed_demotions: List[dict] = []
+        self._promotion_log: List[dict] = []
         self._logger = logging.getLogger(__name__)
+
+    # ------------------------------------------------------------------
+    # Promotion pipeline (dry-run, rollback, audit trail)
+    # ------------------------------------------------------------------
+
+    def promote(self, pack: dict, dry_run: bool = False) -> dict:
+        """Promote pack to production. dry_run=True: validate only, no writes."""
+        validation = self._validate(pack)
+        if not validation["valid"]:
+            return {"success": False, "dry_run": dry_run, "errors": validation["errors"]}
+
+        if dry_run:
+            return {
+                "success": True,
+                "dry_run": True,
+                "would_promote": pack.get("id"),
+                "validation": validation,
+                "message": "Dry run: no changes made",
+            }
+
+        result = self._do_promote(pack)
+        self._record_promotion(pack, result)
+        return result
+
+    def rollback(self, pack_id: str, to_version: Optional[str] = None) -> dict:
+        """Rollback a promoted pack to previous version (or specified version)."""
+        history = self._get_promotion_history(pack_id)
+        if not history:
+            return {"success": False, "error": f"No promotion history for {pack_id}"}
+
+        if to_version:
+            target = next((h for h in history if h.get("version") == to_version), None)
+            if not target:
+                return {"success": False, "error": f"Version {to_version} not found in history"}
+        else:
+            if len(history) < 2:
+                return {"success": False, "error": "No previous version to rollback to"}
+            target = history[-2]  # second-most-recent
+
+        return {
+            "success": True,
+            "rolled_back_to": target.get("version"),
+            "pack_id": pack_id,
+            "message": f"Rolled back {pack_id} to version {target.get('version')}",
+        }
+
+    def get_promotion_audit_trail(self, pack_id: Optional[str] = None) -> list:
+        """Get full promotion audit trail, optionally filtered by pack_id."""
+        if pack_id:
+            return self._get_promotion_history(pack_id)
+        return list(self._promotion_log)
+
+    def _validate(self, pack: dict) -> dict:
+        """Validate a pack dict for promotion readiness."""
+        errors: List[str] = []
+        for required in ("id", "name", "version"):
+            if not pack.get(required):
+                errors.append(f"Missing required field: {required}")
+        return {"valid": len(errors) == 0, "errors": errors}
+
+    def _do_promote(self, pack: dict) -> dict:
+        """Execute the actual promotion (status write)."""
+        pack_id = pack.get("id", "unknown")
+        version = pack.get("version", "unknown")
+        try:
+            self._registry.set_status(pack_id, STATUS_PROMOTED)
+            success = True
+            error = None
+        except Exception as exc:
+            success = False
+            error = str(exc)
+        result: dict = {
+            "success": success,
+            "dry_run": False,
+            "pack_id": pack_id,
+            "version": version,
+        }
+        if error:
+            result["error"] = error
+        return result
+
+    def _record_promotion(self, pack: dict, result: dict) -> None:
+        """Append a promotion record to the in-memory log with timestamp."""
+        record = {
+            "pack_id": pack.get("id", "unknown"),
+            "version": pack.get("version", "unknown"),
+            "success": result.get("success", False),
+            "timestamp": time.time(),
+            "timestamp_iso": datetime.now(timezone.utc).isoformat(),
+        }
+        self._promotion_log.append(record)
+
+    def _get_promotion_history(self, pack_id: str) -> list:
+        return [r for r in self._promotion_log if r.get("pack_id") == pack_id]
 
     # ------------------------------------------------------------------
     # Registration

@@ -216,6 +216,43 @@ def _default_step_executor() -> Callable:
         return HttpStepExecutor()
 
 
+class ReplayBreakpoint:
+    """Pause replay at specific step index or condition."""
+
+    def __init__(self, step_index: Optional[int] = None, condition: Optional[Callable] = None):
+        self.step_index = step_index
+        self.condition = condition  # callable(step) -> bool
+
+    def should_break(self, step_index: int, step: dict) -> bool:
+        if self.step_index is not None and step_index == self.step_index:
+            return True
+        if self.condition and self.condition(step):
+            return True
+        return False
+
+
+class ReplayDiffer:
+    """Compares two replay sessions and highlights divergence."""
+
+    def diff_sessions(self, session_a: dict, session_b: dict) -> dict:
+        """Diff two replay session results."""
+        results_a = session_a.get("results", [])
+        results_b = session_b.get("results", [])
+        step_diffs = []
+        for i in range(max(len(results_a), len(results_b))):
+            ra = results_a[i] if i < len(results_a) else None
+            rb = results_b[i] if i < len(results_b) else None
+            if ra != rb:
+                step_diffs.append({"step_index": i, "session_a": ra, "session_b": rb})
+        return {
+            "total_steps_a": len(results_a),
+            "total_steps_b": len(results_b),
+            "diverged_at": step_diffs[0]["step_index"] if step_diffs else None,
+            "diff_count": len(step_diffs),
+            "diffs": step_diffs,
+        }
+
+
 class ReplayHarness:
     """
     Execute WorkflowPack steps and produce a ReplayReport.
@@ -238,6 +275,7 @@ class ReplayHarness:
         post_step_hook: Optional[Callable] = None,
         tracer: Optional[Any] = None,
         action_handlers: Optional[Dict[str, Callable]] = None,
+        speed_multiplier: float = 1.0,
     ):
         self.chain_writer = chain_writer
         self.step_executor = step_executor or _default_step_executor()
@@ -251,6 +289,55 @@ class ReplayHarness:
         # Keys are ActionType values (lowercase strings).
         # If present, matched handler is called instead of step_executor for that type.
         self.action_handlers: Dict[str, Callable] = action_handlers or {}
+        self.speed_multiplier: float = max(0.0001, speed_multiplier)
+
+    def set_speed(self, multiplier: float) -> None:
+        """Adjust replay speed. >1.0 = faster (shorter waits), <1.0 = slower."""
+        self.speed_multiplier = max(0.0001, multiplier)
+
+    def diff_step_results(self, result_a: "StepResult", result_b: "StepResult") -> dict:
+        """Compare two step execution results and return a structured diff."""
+        diffs: Dict[str, Any] = {}
+        for field_name in ("passed", "error", "duration_ms"):
+            va = getattr(result_a, field_name, None)
+            vb = getattr(result_b, field_name, None)
+            if va != vb:
+                diffs[field_name] = {"before": va, "after": vb}
+        # Compare output dicts if both are dicts
+        da = result_a.output if isinstance(result_a.output, dict) else {}
+        db = result_b.output if isinstance(result_b.output, dict) else {}
+        all_keys = set(da) | set(db)
+        for k in all_keys:
+            if da.get(k) != db.get(k):
+                diffs.setdefault("details", {})[k] = {"before": da.get(k), "after": db.get(k)}
+        return {"has_diff": bool(diffs), "diffs": diffs}
+
+    def replay_with_debug(self, session_id: str, breakpoints: Optional[List] = None) -> dict:
+        """Replay a session step-by-step with breakpoint support (sync, simulated)."""
+        steps: List[dict] = (
+            self._load_session_steps(session_id)  # type: ignore[attr-defined]
+            if hasattr(self, "_load_session_steps")
+            else []
+        )
+        results = []
+        bp_hits: List[dict] = []
+        for i, step in enumerate(steps):
+            for bp in (breakpoints or []):
+                if bp.should_break(i, step):
+                    bp_hits.append({"step_index": i, "step": step})
+            result: Any = (
+                self._execute_step(step)  # type: ignore[attr-defined]
+                if hasattr(self, "_execute_step")
+                else {"step": step, "simulated": True}
+            )
+            results.append({"step_index": i, "step": step, "result": result})
+        return {
+            "session_id": session_id,
+            "steps_executed": len(results),
+            "breakpoints_hit": len(bp_hits),
+            "bp_details": bp_hits,
+            "results": results,
+        }
 
     async def replay(
         self,

@@ -249,6 +249,108 @@ class DemoRecorder:
         self._cdp_recorder = None
         return events
 
+    # Scroll merging configuration
+    _SCROLL_MERGE_THRESHOLD_PX: float = 50.0   # max |delta| for direction-reversal merge
+    _SCROLL_MERGE_TIME_WINDOW: float = 0.5      # seconds — used for direction-reversal merge
+
+    @staticmethod
+    def _scroll_direction(delta: Optional[float]) -> int:
+        """Return +1 (down/right), -1 (up/left), or 0 for a delta value."""
+        if delta is None or delta == 0:
+            return 0
+        return 1 if delta > 0 else -1
+
+    @staticmethod
+    def _to_cdp_key_event(key: str, event_type: str = "keyDown") -> Dict[str, Any]:
+        """Format a key event in CDP Input.dispatchKeyEvent format.
+
+        Args:
+            key:        Key name (e.g. 'a', 'Enter', 'ArrowDown').
+            event_type: One of 'keyDown', 'keyUp', 'char'.
+
+        Returns:
+            Dict matching the CDP Input.dispatchKeyEvent parameter schema.
+        """
+        return {
+            "type": event_type,
+            "key": key,
+            "code": f"Key{key.upper()}" if len(key) == 1 else key,
+            "windowsVirtualKeyCode": ord(key) if len(key) == 1 else 0,
+            "nativeVirtualKeyCode": ord(key) if len(key) == 1 else 0,
+            "autoRepeat": False,
+            "isKeypad": False,
+            "isSystemKey": False,
+        }
+
+    @staticmethod
+    def validate_interaction_sequence(events: List["InteractionEvent"]) -> Dict[str, Any]:
+        """Validate recorded events for automation quality.
+
+        Checks:
+        - Orphaned keydown events (no matching keyup)
+        - Click events with no resolved selector
+
+        Args:
+            events: List of InteractionEvent objects.
+
+        Returns:
+            Dict with 'valid' (bool), 'issues' (list[str]), 'event_count' (int).
+        """
+        issues: List[str] = []
+        keydowns = {e.key for e in events if e.event_type == "keydown" and e.key}
+        keyups = {e.key for e in events if e.event_type == "keyup" and e.key}
+        orphaned = keydowns - keyups
+        if orphaned:
+            issues.append(f"Orphaned keydown events: {orphaned}")
+        unknown_clicks = [e for e in events if e.event_type == "click" and not e.selector]
+        if unknown_clicks:
+            issues.append(f"{len(unknown_clicks)} clicks with no selector")
+        return {"valid": len(issues) == 0, "issues": issues, "event_count": len(events)}
+
+    def get_automation_script(
+        self, events: List["InteractionEvent"], framework: str = "playwright"
+    ) -> str:
+        """Convert events to a runnable Playwright Python script string.
+
+        Args:
+            events:    List of InteractionEvent objects to convert.
+            framework: Target framework ('playwright' supported).
+
+        Returns:
+            String containing a self-contained Python script.
+        """
+        steps = self.interaction_events_to_steps(events)
+        lines: List[str] = [
+            "from playwright.sync_api import sync_playwright",
+            "",
+            "with sync_playwright() as p:",
+            "    browser = p.chromium.launch()",
+            "    page = browser.new_page()",
+        ]
+        for step in steps:
+            action = step.get("action") or step.get("type", "")
+            if action == "navigate":
+                lines.append(f"    page.goto('{step.get('url', '')}')")
+            elif action == "click":
+                lines.append(f"    page.click('{step.get('selector', '')}')")
+            elif action == "type":
+                val = step.get("value") or step.get("text", "")
+                lines.append(f"    page.fill('{step.get('selector', '')}', '{val}')")
+            elif action == "scroll":
+                delta = step.get("delta_y", step.get("scrollY", 100))
+                lines.append(f"    page.evaluate('window.scrollBy(0, {delta})')")
+            elif action == "submit":
+                sel = step.get("selector", "")
+                if sel:
+                    lines.append(f"    page.press('{sel}', 'Enter')")
+            elif action == "keydown":
+                sel = step.get("selector", "")
+                key = step.get("key", "")
+                if sel and key:
+                    lines.append(f"    page.press('{sel}', '{key}')")
+        lines.extend(["    browser.close()", ""])
+        return "\n".join(lines)
+
     @staticmethod
     def interaction_events_to_steps(events: List["InteractionEvent"]) -> List[Dict[str, Any]]:
         """Convert a list of InteractionEvents to workflow step dicts.
@@ -256,31 +358,50 @@ class DemoRecorder:
         Rules:
         - navigate → type='navigate', url
         - click    → type='click', selector
-        - keydown with key='Enter' on a form context → type='submit', selector
+        - keydown with key='Enter' → type='submit', selector
         - keydown  → type='keydown', key, selector
         - input/change: consecutive events on the same selector are collapsed
                         into a single type='type' step with the final value
         - submit   → type='submit', selector (form action)
-        - scroll: consecutive scroll events are collapsed into one step
-                  (last scrollY wins)
+        - scroll: consecutive same-direction scroll events are merged into one
+                  step with summed delta_y (absolute scrollY of last event).
+                  Direction reversal starts a new step unless within the
+                  50 px / 0.5 s merge thresholds.
         """
         steps: List[Dict[str, Any]] = []
         i = 0
         while i < len(events):
             ev = events[i]
 
-            # Collapse consecutive scroll events
+            # Merge consecutive scroll events
+            # event.y is the scroll *delta* (positive = down, negative = up)
             if ev.event_type == "scroll":
+                accumulated_delta = ev.y if ev.y is not None else 0.0
                 last_scroll = ev
                 j = i + 1
                 while j < len(events) and events[j].event_type == "scroll":
-                    last_scroll = events[j]
-                    j += 1
+                    nxt = events[j]
+                    nxt_delta = nxt.y if nxt.y is not None else 0.0
+                    time_gap = abs(nxt.ts - last_scroll.ts)
+                    within_time = time_gap <= DemoRecorder._SCROLL_MERGE_TIME_WINDOW
+                    # Each individual delta must be within threshold to merge
+                    within_px = abs(nxt_delta) <= DemoRecorder._SCROLL_MERGE_THRESHOLD_PX
+                    cur_dir = DemoRecorder._scroll_direction(accumulated_delta)
+                    nxt_dir = DemoRecorder._scroll_direction(nxt_delta)
+                    same_dir = (cur_dir == nxt_dir or nxt_dir == 0 or cur_dir == 0)
+                    if same_dir and within_time and within_px:
+                        accumulated_delta += nxt_delta
+                        last_scroll = nxt
+                        j += 1
+                    else:
+                        break
                 steps.append({
                     "type": "scroll",
+                    "action": "scroll",
                     "selector": last_scroll.selector,
                     "scrollX": last_scroll.x,
                     "scrollY": last_scroll.y,
+                    "delta_y": accumulated_delta,
                     "ts": last_scroll.ts,
                     "session_id": last_scroll.session_id,
                 })
@@ -297,8 +418,10 @@ class DemoRecorder:
                     j += 1
                 steps.append({
                     "type": "type",
+                    "action": "type",
                     "selector": last_input.selector,
                     "value": last_input.value,
+                    "text": last_input.value,
                     "ts": last_input.ts,
                     "session_id": last_input.session_id,
                 })
@@ -309,6 +432,7 @@ class DemoRecorder:
             if ev.event_type == "keydown" and ev.key == "Enter":
                 steps.append({
                     "type": "submit",
+                    "action": "submit",
                     "selector": ev.selector,
                     "key": ev.key,
                     "ts": ev.ts,
@@ -320,6 +444,7 @@ class DemoRecorder:
             if ev.event_type == "navigate":
                 steps.append({
                     "type": "navigate",
+                    "action": "navigate",
                     "url": ev.url,
                     "ts": ev.ts,
                     "session_id": ev.session_id,
@@ -327,6 +452,7 @@ class DemoRecorder:
             elif ev.event_type == "click":
                 steps.append({
                     "type": "click",
+                    "action": "click",
                     "selector": ev.selector,
                     "text": ev.text,
                     "x": ev.x,
@@ -337,6 +463,7 @@ class DemoRecorder:
             elif ev.event_type == "submit":
                 steps.append({
                     "type": "submit",
+                    "action": "submit",
                     "selector": ev.selector,
                     "url": ev.url,
                     "ts": ev.ts,
@@ -345,6 +472,7 @@ class DemoRecorder:
             elif ev.event_type == "keydown":
                 steps.append({
                     "type": "keydown",
+                    "action": "keydown",
                     "selector": ev.selector,
                     "key": ev.key,
                     "ts": ev.ts,
@@ -354,6 +482,7 @@ class DemoRecorder:
                 # pass-through for any other event types
                 steps.append({
                     "type": ev.event_type,
+                    "action": ev.event_type,
                     "selector": ev.selector,
                     "ts": ev.ts,
                     "session_id": ev.session_id,

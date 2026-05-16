@@ -290,3 +290,56 @@ class PackDiffer:
                         field_changes=field_changes,
                     ))
         return changes
+
+
+# ---------------------------------------------------------------------------
+# Convenience function: diff_pack_versions
+# ---------------------------------------------------------------------------
+
+def diff_pack_versions(pack_v1: dict, pack_v2: dict) -> dict:
+    """
+    Compare two pack version dicts and return a structured diff summary.
+
+    Returns:
+        {
+            "added_artifacts": list of artifact ids in v2 but not v1,
+            "removed_artifacts": list of artifact ids in v1 but not v2,
+            "changed_fields": dict of {field: {"old": ..., "new": ...}} for
+                              top-level fields that differ (excluding artifacts),
+            "version_bump": str describing the version change, e.g. "1.0 -> 2.0"
+        }
+    """
+    # Version bump
+    v1_ver = str(pack_v1.get("version", ""))
+    v2_ver = str(pack_v2.get("version", ""))
+    version_bump = f"{v1_ver} -> {v2_ver}" if v1_ver or v2_ver else "unknown -> unknown"
+
+    # Artifact diff — compare by artifact id field
+    def _artifact_ids(pack: dict) -> set:
+        arts = pack.get("artifacts", [])
+        return {
+            a.get("id", a.get("artifact_id", str(i)))
+            for i, a in enumerate(arts)
+        }
+
+    ids_v1 = _artifact_ids(pack_v1)
+    ids_v2 = _artifact_ids(pack_v2)
+    added_artifacts = sorted(ids_v2 - ids_v1)
+    removed_artifacts = sorted(ids_v1 - ids_v2)
+
+    # Field diff — top-level fields, excluding artifacts
+    _SKIP = {"artifacts"}
+    all_keys = (set(pack_v1) | set(pack_v2)) - _SKIP
+    changed_fields: Dict[str, Any] = {}
+    for k in sorted(all_keys):
+        old_val = pack_v1.get(k)
+        new_val = pack_v2.get(k)
+        if old_val != new_val:
+            changed_fields[k] = {"old": old_val, "new": new_val}
+
+    return {
+        "added_artifacts": added_artifacts,
+        "removed_artifacts": removed_artifacts,
+        "changed_fields": changed_fields,
+        "version_bump": version_bump,
+    }

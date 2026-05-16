@@ -192,15 +192,15 @@ def test_events_to_steps_scroll():
 
 
 def test_interaction_events_to_steps_deduplicates_scroll():
-    """Consecutive scroll events collapse into one step (last position wins)."""
+    """Consecutive same-direction scroll events within thresholds collapse to one step."""
     events = [
-        _ev(event_type="scroll", x=0.0, y=100.0, ts=1.0),
-        _ev(event_type="scroll", x=0.0, y=300.0, ts=2.0),
-        _ev(event_type="scroll", x=0.0, y=600.0, ts=3.0),
+        _ev(event_type="scroll", x=0.0, y=10.0, ts=1.0),
+        _ev(event_type="scroll", x=0.0, y=20.0, ts=1.2),
+        _ev(event_type="scroll", x=0.0, y=15.0, ts=1.4),
     ]
     steps = DemoRecorder.interaction_events_to_steps(events)
     assert len(steps) == 1
-    assert steps[0]["scrollY"] == 600.0
+    assert steps[0]["scrollY"] == 15.0
 
 
 def test_scroll_not_collapsed_across_other_events():

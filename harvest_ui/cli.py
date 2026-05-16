@@ -651,8 +651,78 @@ def cmd_serve(args) -> int:
 
 
 def cmd_version(_args) -> int:
+    """Show DanteHarvest version."""
     print(f"harvest {__version__}")
     return 0
+
+
+def cmd_status(args) -> int:
+    """Show DanteHarvest system status — connectors, storage, indexing."""
+    output_format = getattr(args, "output_format", "text") or "text"
+    try:
+        from harvest_acquire.connectors.connector_registry import ConnectorRegistry
+        raw = ConnectorRegistry.discover_available() if hasattr(ConnectorRegistry, 'discover_available') else {}
+        # Normalize to a JSON-safe dict (ConnectorStatus objects may not be serializable)
+        if isinstance(raw, dict):
+            connectors = {
+                k: (v if isinstance(v, (str, int, float, bool, type(None)))
+                    else (v.__dict__ if hasattr(v, '__dict__') else str(v)))
+                for k, v in raw.items()
+            }
+        else:
+            connectors = {}
+    except Exception:
+        connectors = {}
+
+    status = {
+        "connectors": connectors,
+        "storage": "ok",
+        "version": __version__,
+    }
+
+    if output_format == "json":
+        print(json.dumps(status, indent=2))
+    elif output_format == "table":
+        print(f"{'Key':<20} {'Value'}")
+        print(f"{'---':<20} {'-----'}")
+        print(f"{'version':<20} {status['version']}")
+        print(f"{'storage':<20} {status['storage']}")
+        print(f"{'connectors':<20} {len(status.get('connectors', {}))} configured")
+    else:
+        print("DanteHarvest Status")
+        print(f"  Storage: {status['storage']}")
+        print(f"  Version: {status['version']}")
+        print(f"  Connectors: {len(status.get('connectors', {}))} configured")
+    return 0
+
+
+def cmd_validate(args) -> int:
+    """Validate a harvest configuration file."""
+    output_format = getattr(args, "output_format", "text") or "text"
+    config_path = args.config_path
+    errors = []
+    if not os.path.exists(config_path):
+        errors.append(f"File not found: {config_path}")
+    else:
+        try:
+            with open(config_path) as f:
+                data = json.load(f)
+            if "source" not in data and "sources" not in data:
+                errors.append("Missing required field: 'source' or 'sources'")
+        except json.JSONDecodeError as e:
+            errors.append(f"Invalid JSON: {e}")
+
+    result = {"valid": len(errors) == 0, "errors": errors, "path": config_path}
+
+    if output_format == "json":
+        print(json.dumps(result, indent=2))
+    else:
+        if result["valid"]:
+            print(f"OK {config_path} is valid")
+        else:
+            for err in errors:
+                print(f"FAIL {err}", file=sys.stderr)
+    return 0 if result["valid"] else 1
 
 
 # ---------------------------------------------------------------------------
@@ -1290,7 +1360,24 @@ def build_parser() -> argparse.ArgumentParser:
     serve_p.add_argument("--port", type=int, default=8742, help="Bind port (default: 8742)")
 
     # version
-    sub.add_parser("version", help="Print version")
+    sub.add_parser("version", help="Print DanteHarvest version")
+
+    # status
+    status_p = sub.add_parser("status", help="Show DanteHarvest system status")
+    status_p.add_argument(
+        "--output-format", dest="output_format", default="text",
+        choices=["text", "json", "table"],
+        help="Output format: text (default), json, table",
+    )
+
+    # validate
+    validate_p = sub.add_parser("validate", help="Validate a harvest configuration file")
+    validate_p.add_argument("config_path", help="Path to the config JSON file")
+    validate_p.add_argument(
+        "--output-format", dest="output_format", default="text",
+        choices=["text", "json"],
+        help="Output format: text (default), json",
+    )
 
     # replay
     replay = sub.add_parser("replay", help="Session replay operations")
@@ -1496,6 +1583,10 @@ def main(argv=None) -> int:
         return cmd_gc(args)
     elif args.command == "version":
         return cmd_version(args)
+    elif args.command == "status":
+        return cmd_status(args)
+    elif args.command == "validate":
+        return cmd_validate(args)
     else:
         parser.print_help()
         return 0

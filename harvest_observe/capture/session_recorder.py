@@ -289,15 +289,18 @@ class SessionRecorder:
         self,
         storage_root: str = "storage/sessions",
         screenshot_fn: Optional[Callable[[], bytes]] = None,
-        capture_interval: float = 5.0,
+        capture_interval: float = 1.0,
+        ocr_enabled: bool = True,
     ):
         self._storage_root = Path(storage_root)
         self._storage_root.mkdir(parents=True, exist_ok=True)
         self._screenshot_fn = screenshot_fn
         self._capture_interval = capture_interval
+        self._ocr_enabled = ocr_enabled
         self._decomposer = VideoDecomposer(storage_root=str(self._storage_root))
         self._live_recording: Optional[SessionRecording] = None
         self._capturer = None   # ContinuousCapturer, lazy import
+        self.network_capture = NetworkCapture()
 
     # ------------------------------------------------------------------
     # Video decomposition (offline)
@@ -475,3 +478,100 @@ class SessionRecorder:
     def is_live(self) -> bool:
         """True if a live capture session is currently active."""
         return bool(self._capturer and self._capturer.is_running)
+
+    def set_capture_interval(self, seconds: float) -> None:
+        """Set the capture interval in seconds. Must be >= 0.1."""
+        if seconds < 0.1:
+            raise ValueError(f"capture_interval must be >= 0.1s, got {seconds}")
+        self._capture_interval = seconds
+
+    def get_ocr_status(self) -> dict:
+        """Return OCR availability and enabled state."""
+        try:
+            import pytesseract  # noqa: F401
+            backend = "pytesseract"
+            available = True
+        except ImportError:
+            try:
+                import easyocr  # noqa: F401
+                backend = "easyocr"
+                available = True
+            except ImportError:
+                backend = "none"
+                available = False
+        return {
+            "enabled": self._ocr_enabled,
+            "available": available,
+            "backend": backend,
+        }
+
+    def get_observation_summary(self) -> dict:
+        """Return a summary of current observation plane configuration."""
+        nc = getattr(self, "network_capture", None)
+        return {
+            "capture_interval_seconds": self._capture_interval,
+            "ocr_enabled": getattr(self, "_ocr_enabled", True),
+            "network_capture_enabled": nc._enabled if nc is not None else False,
+            "keyframes_captured": (
+                len(self._live_recording.frames) if self._live_recording else 0
+            ),
+            "network_requests_captured": (
+                len(nc.get_requests()) if nc is not None else 0
+            ),
+        }
+
+
+class NetworkCapture:
+    """Captures network requests made during browser sessions."""
+
+    def __init__(self) -> None:
+        self._requests: list = []
+        self._enabled: bool = False
+
+    @property
+    def is_enabled(self) -> bool:
+        return self._enabled
+
+    def enable(self) -> None:
+        self._enabled = True
+
+    def disable(self) -> None:
+        self._enabled = False
+
+    def record_request(
+        self,
+        url: str,
+        method: str,
+        status: int,
+        size_bytes: int = 0,
+        duration_ms: float = 0.0,
+    ) -> None:
+        if self._enabled:
+            import time as _time
+            self._requests.append({
+                "url": url,
+                "method": method,
+                "status": status,
+                "size_bytes": size_bytes,
+                "duration_ms": duration_ms,
+                "ts": _time.time(),
+            })
+
+    def get_requests(self) -> list:
+        return list(self._requests)
+
+    def get_summary(self) -> dict:
+        total = len(self._requests)
+        if total == 0:
+            return {"total_requests": 0, "total_bytes": 0, "error_count": 0, "error_rate": 0.0}
+        errors = sum(1 for r in self._requests if r["status"] >= 400)
+        total_bytes = sum(r["size_bytes"] for r in self._requests)
+        return {
+            "total_requests": total,
+            "total_bytes": total_bytes,
+            "error_count": errors,
+            "error_rate": errors / total,
+        }
+
+    def clear(self) -> None:
+        self._requests.clear()

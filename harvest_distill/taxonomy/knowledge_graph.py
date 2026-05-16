@@ -358,6 +358,7 @@ class KnowledgeGraph:
             Number of triples successfully added.
         """
         triples = self.extractor.extract_triples(text)
+        triples = self.extractor.deduplicate_triples(triples)
         added = 0
         for t in triples:
             try:
@@ -372,6 +373,14 @@ class KnowledgeGraph:
             except Exception:
                 pass
         return added
+
+    def link_entities(self, triples: list) -> dict:
+        """Build entity graph — map entity_name -> [triples_involving_entity]."""
+        entity_map: dict = {}
+        for t in triples:
+            for entity in [t.subject, t.object_]:
+                entity_map.setdefault(entity, []).append(t)
+        return entity_map
 
     def add_from_markdown(self, markdown: str, source_id: str = "") -> int:
         """
@@ -388,6 +397,7 @@ class KnowledgeGraph:
             Number of triples successfully added.
         """
         triples = self.extractor.extract_from_markdown(markdown)
+        triples = self.extractor.deduplicate_triples(triples)
         added = 0
         for t in triples:
             try:

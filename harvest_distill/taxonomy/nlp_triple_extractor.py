@@ -22,6 +22,21 @@ from typing import Dict, List, Optional, Set, Tuple
 
 
 # ---------------------------------------------------------------------------
+# Predicate semantic groups for deduplication
+# ---------------------------------------------------------------------------
+
+_PREDICATE_GROUPS: Dict[str, Set[str]] = {
+    "identity":   {"is_a", "is", "equals", "synonym_of"},
+    "membership": {"part_of", "belongs_to", "member_of", "subset_of"},
+    "creation":   {"created_by", "authored_by", "made_by", "built_by"},
+    "location":   {"located_in", "found_in", "based_in"},
+    "usage":      {"uses", "uses_tool", "leverages", "employs"},
+    "possession": {"has", "contains", "includes", "owns"},
+    "relation":   {"related_to", "associated_with", "connected_to"},
+}
+
+
+# ---------------------------------------------------------------------------
 # Triple dataclass
 # ---------------------------------------------------------------------------
 
@@ -31,7 +46,7 @@ class Triple:
     subject: str
     predicate: str
     object_: str
-    confidence: float = 1.0          # 0.0–1.0
+    confidence: float = 1.0          # 0.0-1.0
     source_text: str = ""            # original sentence / fragment
 
     def __eq__(self, other: object) -> bool:
@@ -55,14 +70,14 @@ class NLPTripleExtractor:
     """
     Extracts (subject, predicate, object) triples from plain text.
 
-    Pure stdlib implementation — no spaCy, NLTK, or other NLP dependencies.
+    Pure stdlib implementation - no spaCy, NLTK, or other NLP dependencies.
     Uses rule-based patterns to extract common relationship types.
 
     Example::
 
         extractor = NLPTripleExtractor()
         triples = extractor.extract_triples("Python is a programming language.")
-        # → [Triple(subject='Python', predicate='is_a', object_='programming language', ...)]
+        # -> [Triple(subject='Python', predicate='is_a', object_='programming language', ...)]
     """
 
     # ------------------------------------------------------------------
@@ -72,9 +87,17 @@ class NLPTripleExtractor:
     # ------------------------------------------------------------------
     _PATTERNS: List[Tuple[re.Pattern, str, float]] = []
 
-    # Raw pattern specs — compiled once at class-definition time
+    # Raw pattern specs - compiled once per instance
     _RAW_PATTERNS: List[Tuple[str, str, float]] = [
-        # created-by (most specific — before generic is_a)
+        # authored-by (most specific - before generic created_by)
+        (
+            r"([A-Z][A-Za-z0-9]*(?:\s+[A-Z][A-Za-z0-9]*)*)"
+            r"\s+(?:was authored by|is authored by)\s+"
+            r"([A-Z][A-Za-z0-9]*(?:\s+[A-Z][A-Za-z0-9]*)*)",
+            "authored_by",
+            0.9,
+        ),
+        # created-by
         (
             r"([A-Z][A-Za-z0-9]*(?:\s+[A-Z][A-Za-z0-9]*)*)"
             r"\s+(?:was created by|is made by|is developed by|is built by)\s+"
@@ -85,18 +108,34 @@ class NLPTripleExtractor:
         # located-in
         (
             r"([A-Z][A-Za-z0-9]*(?:\s+[A-Z][A-Za-z0-9]*)*)"
-            r"\s+(?:is located in|is based in|is headquartered in)\s+"
+            r"\s+(?:is located in|is based in|is headquartered in|is found in)\s+"
             r"([A-Z][A-Za-z0-9]*(?:\s+[A-Z][A-Za-z0-9]*)*)",
             "located_in",
             0.9,
         ),
+        # subset-of / member-of (more specific than part_of)
+        (
+            r"([A-Z][A-Za-z0-9]*(?:\s+[A-Z][A-Za-z0-9]*)*)"
+            r"\s+(?:is a subset of|is a member of|is member of)\s+"
+            r"([A-Z][A-Za-z0-9]*(?:\s+[A-Z][A-Za-z0-9]*)*)",
+            "subset_of",
+            0.88,
+        ),
         # part-of
         (
             r"([A-Z][A-Za-z0-9]*(?:\s+[A-Z][A-Za-z0-9]*)*)"
-            r"\s+(?:is part of|belongs to|is a component of|is a subset of)\s+"
+            r"\s+(?:is part of|belongs to|is a component of)\s+"
             r"([A-Z][A-Za-z0-9]*(?:\s+[A-Z][A-Za-z0-9]*)*)",
             "part_of",
             0.85,
+        ),
+        # leverages / employs (more specific than uses)
+        (
+            r"([A-Z][A-Za-z0-9]*(?:\s+[A-Z][A-Za-z0-9]*)*)"
+            r"\s+(?:leverages|employs)\s+"
+            r"([A-Z][A-Za-z0-9]*(?:\s+[A-Z][A-Za-z0-9]*)*)",
+            "leverages",
+            0.82,
         ),
         # uses/requires
         (
@@ -131,6 +170,14 @@ class NLPTripleExtractor:
             "related_to",
             0.7,
         ),
+        # associated-with / connected-to
+        (
+            r"([A-Z][A-Za-z0-9]*(?:\s+[A-Z][A-Za-z0-9]*)*)"
+            r"\s+(?:is associated with|is connected to)\s+"
+            r"([A-Z][A-Za-z0-9]*(?:\s+[A-Z][A-Za-z0-9]*)*)",
+            "associated_with",
+            0.7,
+        ),
         # synonym-of (via "also known as" / "aka")
         (
             r"([A-Z][A-Za-z0-9]*(?:\s+[A-Z][A-Za-z0-9]*)*)"
@@ -147,11 +194,26 @@ class NLPTripleExtractor:
             "succeeds",
             0.85,
         ),
+        # member-of (standalone phrasing)
+        (
+            r"([A-Z][A-Za-z0-9]*(?:\s+[A-Z][A-Za-z0-9]*)*)"
+            r"\s+(?:is a member of|is member of)\s+"
+            r"([A-Z][A-Za-z0-9]*(?:\s+[A-Z][A-Za-z0-9]*)*)",
+            "member_of",
+            0.85,
+        ),
+        # precedes / temporal ordering
+        (
+            r"([A-Z][A-Za-z0-9]*(?:\s+[A-Z][A-Za-z0-9]*)*)"
+            r"\s+(?:precedes|is followed by|comes before)\s+"
+            r"([A-Z][A-Za-z0-9]*(?:\s+[A-Z][A-Za-z0-9]*)*)",
+            "precedes",
+            0.8,
+        ),
     ]
 
     def __init__(self) -> None:
-        # Compile once per instance (class-level _PATTERNS is populated here
-        # to avoid issues with class-body list comprehensions over unbound refs)
+        # Compile once per instance
         self._compiled: List[Tuple[re.Pattern, str, float]] = [
             (re.compile(pat, re.IGNORECASE), label, conf)
             for pat, label, conf in self._RAW_PATTERNS
@@ -206,7 +268,7 @@ class NLPTripleExtractor:
         Candidates are:
         - Capitalized multi-word phrases (Title Case runs)
         - Quoted terms ('term' or "term")
-        - ALL_CAPS abbreviations (≥ 2 chars)
+        - ALL_CAPS abbreviations (>= 2 chars)
 
         Returns a deduplicated list preserving first-seen order.
         """
@@ -230,8 +292,6 @@ class NLPTripleExtractor:
             _add(m.group(1))
 
         # 2. Single capitalized word that looks like a proper noun
-        #    (preceded by space/start, not start of sentence — heuristic: skip
-        #     if preceded by '. ' or is the very first word)
         single_cap = re.compile(r"(?<=[a-z,;]\s)([A-Z][a-z]{2,})\b")
         for m in single_cap.finditer(text):
             _add(m.group(1))
@@ -241,23 +301,55 @@ class NLPTripleExtractor:
         for m in quoted.finditer(text):
             _add(m.group(1))
 
-        # 4. ALL-CAPS abbreviations (≥ 2 uppercase letters)
+        # 4. ALL-CAPS abbreviations (>= 2 uppercase letters)
         abbrev = re.compile(r"\b([A-Z]{2,})\b")
         for m in abbrev.finditer(text):
             _add(m.group(1))
 
         return results
 
+    def deduplicate_triples(self, triples: List[Triple]) -> List[Triple]:
+        """Remove triples where subject+object+predicate_group is already seen.
+
+        Two triples are considered semantic duplicates if their subject and
+        object are the same (case-insensitive) AND their predicate maps to the
+        same semantic category in _PREDICATE_GROUPS.
+        """
+        seen: Set[Tuple[str, str, str]] = set()
+        result: List[Triple] = []
+        for t in triples:
+            group = next(
+                (g for g, preds in _PREDICATE_GROUPS.items() if t.predicate in preds),
+                t.predicate,  # fallback: use predicate itself as its own group
+            )
+            key = (t.subject.lower(), group, t.object_.lower())
+            if key not in seen:
+                seen.add(key)
+                result.append(t)
+        return result
+
+    def link_entities(self, triples: List[Triple]) -> Dict[str, List[Triple]]:
+        """Build entity graph - map entity_name -> [triples_involving_entity].
+
+        When the same string appears as both subject and object in different
+        triples, all those triples are linked under the same key.
+        """
+        entity_map: Dict[str, List[Triple]] = {}
+        for t in triples:
+            for entity in [t.subject, t.object_]:
+                entity_map.setdefault(entity, []).append(t)
+        return entity_map
+
     def extract_from_markdown(self, markdown: str) -> List[Triple]:
         """
         Extract triples from markdown text.
 
         Additional extraction beyond plain-text patterns:
-        - Definition lists: "Term: Definition" → (Term, defined_as, Definition)
-        - Bullet items with key: value → (key, has_value, value)
-        - Headers as category context: entities below a ## header
-          get a (entity, belongs_to_section, header) triple
-        - Plain-text extraction on each paragraph
+        - Headers as entity/section declarations
+        - Table rows: 2-column tables as subject-object pairs
+        - Definition lists: "Term: Definition" -> (Term, defined_as, Definition)
+        - Bullet items: "- X is a Y" or "- X: Y"
+        - Plain-text extraction on each non-special line
 
         Returns deduplicated list of Triple objects.
         """
@@ -278,10 +370,33 @@ class NLPTripleExtractor:
         for line in lines:
             line_stripped = line.strip()
 
-            # --- Headers ---
+            # --- Headers: emit as entity/section declaration ---
             header_m = re.match(r"^#{1,6}\s+(.+)$", line_stripped)
             if header_m:
                 current_header = header_m.group(1).strip()
+                _add(Triple(
+                    subject=current_header,
+                    predicate="is_section",
+                    object_="document",
+                    confidence=0.5,
+                    source_text=line_stripped,
+                ))
+                continue
+
+            # --- Table rows: 2-column tables as subject-object pairs ---
+            table_m = re.match(r"^\|\s*([^|]+?)\s*\|\s*([^|]+?)\s*\|?\s*$", line_stripped)
+            if table_m:
+                col1 = table_m.group(1).strip()
+                col2 = table_m.group(2).strip()
+                # Skip separator rows like |---|---|
+                if col1 and col2 and not re.match(r"^[-:]+$", col1) and not re.match(r"^[-:]+$", col2):
+                    _add(Triple(
+                        subject=col1,
+                        predicate="related_to",
+                        object_=col2,
+                        confidence=0.65,
+                        source_text=line_stripped,
+                    ))
                 continue
 
             # --- Definition list / key: value ---
@@ -310,19 +425,42 @@ class NLPTripleExtractor:
                         ))
                 continue
 
-            # --- Bullet "- Key: Value" ---
-            bullet_m = re.match(r"^[-*]\s+([A-Za-z][^:]{1,60}):\s+(.{2,})$", line_stripped)
+            # --- Bullet items: "- X is a Y", "- X: Y", or plain content ---
+            bullet_m = re.match(r"^[-*]\s+(.+)$", line_stripped)
             if bullet_m:
-                key = bullet_m.group(1).strip()
-                val = bullet_m.group(2).strip()
-                if not re.search(r"https?://|^\d{4}-\d{2}|^[0-9]", val):
+                bullet_content = bullet_m.group(1).strip()
+                # Try "X is a Y" in bullet
+                isa_m = re.match(
+                    r"([A-Z][A-Za-z0-9]*(?:\s+[A-Z][A-Za-z0-9]*)*)"
+                    r"\s+is\s+(?:a|an|the)\s+([a-zA-Z][A-Za-z0-9]*(?:\s+[a-zA-Z][A-Za-z0-9]*)*)",
+                    bullet_content,
+                )
+                if isa_m:
                     _add(Triple(
-                        subject=key,
-                        predicate="defined_as",
-                        object_=val,
-                        confidence=0.75,
+                        subject=isa_m.group(1).strip(),
+                        predicate="is_a",
+                        object_=isa_m.group(2).strip(),
+                        confidence=0.8,
                         source_text=line_stripped,
                     ))
+                else:
+                    # Try "Key: Value" in bullet
+                    kv_m = re.match(r"([A-Za-z][^:]{1,60}):\s+(.{2,})$", bullet_content)
+                    if kv_m:
+                        key = kv_m.group(1).strip()
+                        val = kv_m.group(2).strip()
+                        if not re.search(r"https?://|^\d{4}-\d{2}|^[0-9]", val):
+                            _add(Triple(
+                                subject=key,
+                                predicate="defined_as",
+                                object_=val,
+                                confidence=0.75,
+                                source_text=line_stripped,
+                            ))
+                    else:
+                        # Run plain-text patterns on bullet content
+                        for t in self.extract_triples(bullet_content):
+                            _add(t)
                 continue
 
             # --- Plain text extraction on non-special lines ---

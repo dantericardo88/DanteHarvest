@@ -29,11 +29,60 @@ import time
 from pathlib import Path
 from typing import List, Optional
 
+import hashlib
+import hmac
+import json
+
 from harvest_core.provenance.chain_entry import ChainEntry
 from harvest_core.provenance.chain_writer import ChainWriter
 from harvest_core.provenance.merkle_chain import MerkleChainManifest
 
 logger = logging.getLogger(__name__)
+
+_DEFAULT_SIGN_KEY = b"harvest-manifest-signing-key-v1"
+_ENV_SIGN_KEY_VAR = "HARVEST_SIGN_KEY"
+
+
+def _get_signing_key() -> bytes:
+    """
+    Return the signing key from HARVEST_SIGN_KEY env var, or fall back to the
+    built-in default with a one-time warning.
+    """
+    import os
+    raw = os.environ.get(_ENV_SIGN_KEY_VAR, "")
+    if raw:
+        return raw.encode()
+    logger.warning(
+        "HARVEST_SIGN_KEY not set — using built-in default signing key. "
+        "Set %s to a secret value for production deployments.",
+        _ENV_SIGN_KEY_VAR,
+    )
+    return _DEFAULT_SIGN_KEY
+
+
+class ChainSealError(Exception):
+    """Raised when Merkle chain sealing fails (fail-closed mode)."""
+
+
+def _sign_manifest(manifest: dict, key: Optional[bytes] = None) -> str:
+    """
+    Return a 64-char hex HMAC-SHA256 signature of the manifest dict.
+
+    The manifest is serialised with sorted keys to guarantee determinism
+    regardless of insertion order.
+    """
+    signing_key: bytes = key if key is not None else _get_signing_key()
+    payload = json.dumps(manifest, sort_keys=True, separators=(",", ":")).encode()
+    return hashlib.sha256(signing_key + payload).hexdigest()
+
+
+def _verify_manifest(manifest: dict, signature: str, key: Optional[bytes] = None) -> bool:
+    """Verify that *signature* matches the HMAC-SHA256 of *manifest*."""
+    expected = _sign_manifest(manifest, key=key)
+    # constant-time comparison to prevent timing attacks
+    if len(expected) != len(signature):
+        return False
+    return hmac.compare_digest(expected, signature)
 
 
 class AutoSealingChainWriter(ChainWriter):
@@ -98,26 +147,42 @@ class AutoSealingChainWriter(ChainWriter):
     def seal_now(self) -> bool:
         """
         Immediately seal the chain and update the Merkle manifest.
-        Returns True on success, False on failure (fail-open).
+        Returns True on success; raises ChainSealError on failure (fail-closed).
         """
         try:
             entries = self.read_all()
             if not entries:
                 return True
-            manifest = self._merkle.seal(entries)
-            self._last_manifest = manifest
+            manifest_obj = self._merkle.seal(entries)
+            self._last_manifest = manifest_obj
             self._seal_count += 1
             self._last_seal_at = time.time()
             self._appends_since_seal = 0
+            # Write signature into the manifest sidecar file
+            self._write_signature()
             logger.debug(
                 "AutoSealingChainWriter: sealed chain (seq=%d, root=%s...)",
                 len(entries),
-                manifest.merkle_root[:12],
+                manifest_obj.merkle_root[:12],
             )
             return True
+        except ChainSealError:
+            raise
         except Exception as e:
-            logger.warning("AutoSealingChainWriter: seal failed: %s", e)
-            return False
+            raise ChainSealError(f"Merkle seal failed: {e}") from e
+
+    def _write_signature(self) -> None:
+        """Add HMAC-SHA256 signature to the manifest sidecar JSON file."""
+        mp = self._merkle.manifest_path
+        if not mp.exists():
+            return
+        try:
+            data = json.loads(mp.read_text())
+            sig_payload = {k: v for k, v in data.items() if k != "_signature"}
+            data["_signature"] = _sign_manifest(sig_payload)
+            mp.write_text(json.dumps(data, indent=2))
+        except Exception as e:
+            logger.warning("AutoSealingChainWriter: could not write signature: %s", e)
 
     def verify(self) -> tuple[bool, Optional[str]]:
         """
@@ -131,6 +196,68 @@ class AutoSealingChainWriter(ChainWriter):
             return self._merkle.verify(entries)
         except Exception as e:
             return False, str(e)
+
+    def verify_chain_integrity(self) -> dict:
+        """
+        Full integrity check: Merkle verification + signature check.
+        Returns {"valid": bool, "entries": int, "errors": list[str]}.
+        """
+        errors: List[str] = []
+        entries: List = []
+
+        try:
+            entries = self.read_all()
+        except Exception as e:
+            errors.append(f"read_all failed: {e}")
+            return {"valid": False, "entries": 0, "errors": errors}
+
+        if not self._merkle.is_sealed():
+            errors.append("chain not yet sealed")
+            return {"valid": False, "entries": len(entries), "errors": errors}
+
+        # Merkle verification
+        try:
+            ok, reason = self._merkle.verify(entries)
+            if not ok:
+                errors.append(f"Merkle verification failed: {reason}")
+        except Exception as e:
+            errors.append(f"Merkle verify error: {e}")
+            ok = False
+
+        # Signature verification
+        mp = self._merkle.manifest_path
+        if mp.exists():
+            try:
+                data = json.loads(mp.read_text())
+                sig = data.get("_signature")
+                if sig is None:
+                    errors.append("manifest unsigned — _signature field missing")
+                    ok = False
+                else:
+                    payload = {k: v for k, v in data.items() if k != "_signature"}
+                    if not _verify_manifest(payload, sig):
+                        errors.append("signature verification failed — manifest may be tampered")
+                        ok = False
+            except Exception as e:
+                errors.append(f"signature check error: {e}")
+                ok = False
+        else:
+            errors.append("manifest file not found")
+            ok = False
+
+        return {"valid": ok and not errors, "entries": len(entries), "errors": errors}
+
+    def get_chain_manifest(self) -> dict:
+        """
+        Return the full manifest dict (including _signature).
+        Raises ChainSealError if the chain has not been sealed.
+        """
+        if not self._merkle.is_sealed():
+            raise ChainSealError("chain not yet sealed — call seal_now() or append an entry first")
+        mp = self._merkle.manifest_path
+        if not mp.exists():
+            raise ChainSealError("manifest file not found")
+        return json.loads(mp.read_text())
 
     # ------------------------------------------------------------------
     # Properties

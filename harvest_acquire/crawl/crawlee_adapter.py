@@ -407,46 +407,174 @@ def _extract_app_config(html: str) -> Dict[str, Any]:
     return result
 
 
-def _detect_csr_only(html: str, text_content: str) -> bool:
+def _detect_csr_only(html: str, text_content: str) -> dict:
     """
-    Return True if the page appears to be CSR-only (pure client-side rendered).
-    Heuristics:
-    - Visible text content is very short (<1000 chars), AND
-    - The ratio of <script> tag bytes to total body bytes is high (>70%)
-    """
-    text_len = len(text_content)
-    if text_len >= 1000:
-        return False  # substantial server-rendered text, not CSR-only
+    Return a dict describing whether the page appears to be CSR-only.
 
-    # Measure script weight vs total
+    Returns:
+        {
+            "is_csr": bool,
+            "confidence": float,   # 0.0–1.0
+            "signals": list[str],  # human-readable signals that fired
+        }
+    """
+    signals: list = []
+    score: float = 0.0
+
+    text_len = len(text_content)
+    if text_len < 1000:
+        score += 0.4
+        signals.append(f"short_body({text_len}chars)")
+
+    # Script weight vs total body
     script_content = "".join(
         re.findall(r"<script[^>]*>(.*?)</script>", html, flags=re.DOTALL | re.IGNORECASE)
     )
     total_len = len(html)
-    if total_len == 0:
-        return False
-    script_ratio = len(script_content) / total_len
-    return script_ratio > 0.70
+    if total_len > 0:
+        script_ratio = len(script_content) / total_len
+        if script_ratio > 0.70:
+            score += 0.3
+            signals.append(f"high_script_ratio({script_ratio:.0%})")
+
+    # Framework marker detected
+    fw = _detect_framework(html)
+    if fw.get("is_spa"):
+        score += 0.2
+        signals.append(f"framework({fw['primary']})")
+
+    # No substantial pre-rendered text
+    stripped = re.sub(r"\s+", " ", text_content).strip()
+    if len(stripped) < 200:
+        score += 0.1
+        signals.append("no_prerendered_text")
+
+    score = min(1.0, score)
+    return {"is_csr": score > 0.5, "confidence": round(score, 2), "signals": signals}
 
 
-def _detect_framework(html: str) -> str:
-    """Detect the JS framework used, returning a short identifier."""
-    sample = html[:8000].lower()
-    if "__next_data__" in sample:
-        return "next"
-    if "_nuxt" in sample or "nuxtjs" in sample:
-        return "nuxt"
-    if "svelte" in sample:
-        return "svelte"
-    if "data-reactroot" in sample or "react" in sample:
-        return "react"
-    if "ng-version" in sample or "angular" in sample:
-        return "angular"
-    if "data-v-" in sample or "vue" in sample or "v-cloak" in sample:
-        return "vue"
-    if "ember" in sample:
-        return "ember"
-    return "ssr-generic"
+def _detect_framework(html: str) -> dict:
+    """Detect JS framework from HTML source, returning a structured dict."""
+    frameworks = []
+    indicators = {
+        "next.js": ["__NEXT_DATA__", "_next/static", "next/router"],
+        "nuxt.js": ["__NUXT__", "_nuxt/", "nuxt-link"],
+        "react": ["react-root", "data-reactroot", "data-reactid"],
+        "vue.js": ["__vue__", "v-app", "data-v-"],
+        "angular": ["ng-version", "_nghost", "ng-app"],
+        "svelte": ["svelte-", "__svelte"],
+        "remix": ["__remixContext", "remix-params-helper"],
+        "gatsby": ["gatsby-focus-wrapper", "__gatsby"],
+    }
+    for fw, signs in indicators.items():
+        if any(s in html for s in signs):
+            count = sum(html.count(s) for s in signs)
+            frameworks.append({
+                "name": fw,
+                "confidence": min(1.0, count / 3),
+                "indicators_found": [s for s in signs if s in html],
+            })
+    primary = frameworks[0]["name"] if frameworks else None
+    return {
+        "frameworks": frameworks,
+        "primary": primary,
+        "is_spa": len(frameworks) > 0,
+        "ssr_likely": (
+            primary is not None
+            and "next" in primary
+            and "__NEXT_DATA__" in html
+        ),
+    }
+
+
+def _detect_framework_str(html: str) -> str:
+    """Compatibility shim: return a short framework string (legacy callers)."""
+    result = _detect_framework(html)
+    primary = result.get("primary")
+    if primary is None:
+        return "ssr-generic"
+    _map = {
+        "next.js": "next", "nuxt.js": "nuxt", "react": "react",
+        "vue.js": "vue", "angular": "angular", "svelte": "svelte",
+        "remix": "remix", "gatsby": "gatsby",
+    }
+    return _map.get(primary, primary)
+
+
+# ---------------------------------------------------------------------------
+# MutationObserver helpers
+# ---------------------------------------------------------------------------
+
+MUTATION_OBSERVER_JS = """
+(function() {
+    window.__harvestMutationCount = 0;
+    window.__harvestMutationObserver = new MutationObserver(function(mutations) {
+        window.__harvestMutationCount += mutations.length;
+    });
+    window.__harvestMutationObserver.observe(document.body, {
+        childList: true, subtree: true, attributes: true
+    });
+    return window.__harvestMutationCount;
+})();
+"""
+
+
+def _inject_mutation_observer(page) -> None:
+    """Inject MutationObserver to track DOM changes after load."""
+    if hasattr(page, "evaluate"):
+        page.evaluate(MUTATION_OBSERVER_JS)
+
+
+def _get_mutation_count(page) -> int:
+    """Get number of DOM mutations since observer was injected."""
+    if hasattr(page, "evaluate"):
+        return page.evaluate("window.__harvestMutationCount || 0")
+    return 0
+
+
+def _wait_for_stable_dom(page, max_wait: float = 3.0, stability_window: float = 0.3) -> bool:
+    """Wait until DOM mutation rate drops to zero for stability_window seconds."""
+    import time as _time
+    start = _time.time()
+    prev_count = _get_mutation_count(page)
+    last_change = _time.time()
+    while _time.time() - start < max_wait:
+        _time.sleep(0.1)
+        current = _get_mutation_count(page)
+        if current != prev_count:
+            prev_count = current
+            last_change = _time.time()
+        elif _time.time() - last_change >= stability_window:
+            return True
+    return False
+
+
+def get_rendering_summary(html: str) -> dict:
+    """
+    Combine all JS/SPA analysis into a single structured dict.
+
+    Returns:
+        {
+            "framework": dict,            # from _detect_framework
+            "csr_detection": dict,        # from _detect_csr_only
+            "preloaded_state_keys": list, # keys found by _extract_preloaded_state
+            "inline_data_attrs": int,     # count from _extract_inline_data_attrs
+            "app_config_keys": list,      # keys found by _extract_app_config
+        }
+    """
+    fw = _detect_framework(html)
+    text_content = _extract_text_content(html)
+    csr = _detect_csr_only(html, text_content)
+    preloaded = _extract_preloaded_state(html)
+    inline_attrs = _extract_inline_data_attrs(html)
+    app_cfg = _extract_app_config(html)
+    return {
+        "framework": fw,
+        "csr_detection": csr,
+        "preloaded_state_keys": list(preloaded.keys()),
+        "inline_data_attrs": len(inline_attrs),
+        "app_config_keys": list(app_cfg.keys()),
+    }
 
 
 def _extract_meta_tags(html: str) -> Dict[str, str]:
@@ -580,11 +708,12 @@ def _fetch_url_spa_enhanced_dict(
     text_content = _extract_text_content(html)
 
     # CSR-only detection
-    csr_only = _detect_csr_only(html, text_content)
+    csr_result = _detect_csr_only(html, text_content)
+    csr_only = csr_result["is_csr"]
     if csr_only:
         framework = "csr-only"
     else:
-        framework = _detect_framework(html)
+        framework = _detect_framework_str(html)
 
     # Extended structured extraction
     json_ld_blocks = [

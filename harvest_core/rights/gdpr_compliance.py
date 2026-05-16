@@ -47,6 +47,39 @@ _log = logging.getLogger(__name__)
 
 
 # ---------------------------------------------------------------------------
+# Consent tracking
+# ---------------------------------------------------------------------------
+
+class ConsentRecord:
+    """Tracks data subject consent status."""
+
+    def __init__(self):
+        self._consents: dict = {}  # subject_id -> {granted: bool, ts: float, basis: str}
+
+    def grant_consent(self, subject_id: str, basis: str = "explicit") -> None:
+        self._consents[subject_id] = {
+            "granted": True, "ts": time.time(), "basis": basis
+        }
+
+    def withdraw_consent(self, subject_id: str) -> None:
+        self._consents[subject_id] = {
+            "granted": False, "ts": time.time(), "basis": "withdrawn"
+        }
+
+    def is_consented(self, subject_id: str) -> bool:
+        record = self._consents.get(subject_id)
+        return bool(record and record["granted"])
+
+    def get_withdrawn_subjects(self) -> list:
+        return [sid for sid, r in self._consents.items() if not r["granted"]]
+
+    def get_summary(self) -> dict:
+        total = len(self._consents)
+        granted = sum(1 for r in self._consents.values() if r["granted"])
+        return {"total": total, "granted": granted, "withdrawn": total - granted}
+
+
+# ---------------------------------------------------------------------------
 # Erasure Request / Receipt
 # ---------------------------------------------------------------------------
 
@@ -152,6 +185,10 @@ class GDPRComplianceManager:
         self._erasure_log = self._log_dir / self.ERASURE_LOG
         self._requests_log = self._log_dir / self.REQUESTS_LOG
         self._deletion_log: List[dict] = []
+        self.consent = ConsentRecord()
+        self._last_check_ts: float = 0.0
+        self._artifacts_checked: int = 0
+        self._artifacts_deleted: int = 0
 
     # ------------------------------------------------------------------
     # Article 17 — Right to Erasure
@@ -335,6 +372,50 @@ class GDPRComplianceManager:
             "success": success,
         })
         return deleted_paths
+
+    def fulfill_erasure_request(self, subject_id: str, artifact_store) -> dict:
+        """Delete all artifacts associated with subject_id (GDPR Art. 17)."""
+        deleted = []
+        errors = []
+        for artifact_id in artifact_store.list_artifacts():
+            meta = artifact_store.get_metadata(artifact_id)
+            if meta and meta.get("subject_id") == subject_id:
+                try:
+                    artifact_store.delete(artifact_id)
+                    deleted.append(artifact_id)
+                except Exception as e:
+                    errors.append({"artifact_id": artifact_id, "error": str(e)})
+        self._artifacts_deleted += len(deleted)
+        return {
+            "subject_id": subject_id,
+            "deleted": deleted,
+            "errors": errors,
+            "fulfilled": len(errors) == 0,
+        }
+
+    def get_compliance_report(self) -> dict:
+        """Return a lightweight compliance snapshot dict."""
+        pending = len(self.pending_requests())
+        return {
+            "retention_policy_active": True,
+            "last_check_ts": self._last_check_ts,
+            "artifacts_checked": self._artifacts_checked,
+            "artifacts_deleted": self._artifacts_deleted,
+            "consent_tracking_enabled": True,
+            "pending_erasure_requests": pending,
+        }
+
+    def run_retention_check(self) -> List[str]:
+        """Run a synchronous retention sweep and update internal stats."""
+        from datetime import datetime, timezone
+        self._last_check_ts = time.time()
+        expired = self._enforcer.sweep(now=datetime.now(timezone.utc))
+        expired_ids = [e.artifact_id for e in expired]
+        self._artifacts_checked += len(self._enforcer._records)
+        if expired_ids:
+            self._enforcer.gc(now=datetime.now(timezone.utc))
+            self._artifacts_deleted += len(expired_ids)
+        return expired_ids
 
     def get_deletion_log(self) -> List[dict]:
         """Return a list of file-deletion outcomes from erasure processing.

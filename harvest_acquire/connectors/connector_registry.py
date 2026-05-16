@@ -4,10 +4,16 @@ ConnectorRegistry — zero-config discovery and instantiation of all Harvest con
 Supports zero-cost discovery: callers can learn which connectors are available
 based solely on environment variables, without importing connector modules or
 making any network calls.
+
+Custom connectors can be added via the ConnectorPlugin framework without
+touching core code — see ``ConnectorPlugin``, ``connector_plugin`` decorator,
+and ``ConnectorRegistry.register_plugin``.
 """
 
 from __future__ import annotations
 
+import importlib
+import importlib.util
 import os
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional
@@ -40,6 +46,54 @@ class ConnectorNotAvailableError(Exception):
 
 
 # ---------------------------------------------------------------------------
+# Plugin framework
+# ---------------------------------------------------------------------------
+
+
+class ConnectorPlugin:
+    """Base class for custom connector plugins.
+
+    Subclass this, set ``name``, and list any required env-var names in
+    ``required_env_vars``.  Register via ``@connector_plugin`` or by calling
+    ``ConnectorRegistry.register_plugin(MyPlugin)``.
+
+    Example::
+
+        @connector_plugin
+        class MyDatabaseConnector(ConnectorPlugin):
+            name = "my_db"
+            required_env_vars = ["MY_DB_URL"]
+
+            def connect(self, **kwargs):
+                ...
+
+            def fetch(self, query: str, **kwargs) -> list:
+                ...
+    """
+
+    name: str = ""
+    required_env_vars: List[str] = []
+
+    def is_available(self) -> bool:
+        """Return True if all required env vars are set."""
+        return all(os.environ.get(v) for v in self.required_env_vars)
+
+    def get_config_hint(self) -> str:
+        """Human-readable hint about which env vars to set."""
+        if not self.required_env_vars:
+            return "No credentials required."
+        return f"Set: {', '.join(self.required_env_vars)}"
+
+    def connect(self, **kwargs):
+        """Establish a connection.  Must be overridden by subclasses."""
+        raise NotImplementedError(f"{type(self).__name__}.connect() is not implemented")
+
+    def fetch(self, query: str, **kwargs) -> list:
+        """Fetch documents matching *query*.  Must be overridden by subclasses."""
+        raise NotImplementedError(f"{type(self).__name__}.fetch() is not implemented")
+
+
+# ---------------------------------------------------------------------------
 # Registry
 # ---------------------------------------------------------------------------
 
@@ -51,7 +105,13 @@ class ConnectorRegistry:
     based on environment variables, without requiring credentials upfront.
 
     Discovery is ZERO-COST — only checks os.environ, no imports or network calls.
+
+    Custom connectors can be registered via ``register_plugin`` or the
+    ``@connector_plugin`` decorator without modifying core code.
     """
+
+    # Plugin registry: name -> ConnectorPlugin subclass
+    _plugin_registry: Dict[str, type] = {}
 
     # Map connector_name -> list of env-var alternatives (any one present = available).
     # An empty list means the connector requires no token (always available).
@@ -181,13 +241,117 @@ class ConnectorRegistry:
         return f"{count}/{total} connectors available ({names_str})"
 
     # ---------------------------------------------------------------------------
+    # Plugin framework
+    # ---------------------------------------------------------------------------
+
+    @classmethod
+    def register_plugin(cls, plugin_class: type) -> None:
+        """Register a custom connector plugin class.
+
+        Args:
+            plugin_class: A subclass of ``ConnectorPlugin`` with a non-empty
+                ``name`` attribute.
+
+        Raises:
+            ValueError: if ``plugin_class.name`` is missing or empty.
+        """
+        if not hasattr(plugin_class, "name") or not plugin_class.name:
+            raise ValueError(
+                f"Plugin {plugin_class} must define a non-empty 'name' attribute"
+            )
+        cls._plugin_registry[plugin_class.name] = plugin_class
+
+    @classmethod
+    def get_plugin(cls, name: str) -> type:
+        """Return a registered plugin class by name.
+
+        Raises:
+            KeyError: if no plugin with that name is registered.
+        """
+        if name not in cls._plugin_registry:
+            raise KeyError(
+                f"No plugin registered for '{name}'. "
+                f"Available: {list(cls._plugin_registry)}"
+            )
+        return cls._plugin_registry[name]
+
+    @classmethod
+    def list_plugins(cls) -> List[dict]:
+        """List all registered custom connector plugins.
+
+        Returns a list of dicts with ``name`` and ``available`` keys.
+        ``available`` reflects whether the plugin's required env vars are set.
+        """
+        return [
+            {
+                "name": name,
+                "available": cls._plugin_registry[name]().is_available(),
+            }
+            for name in cls._plugin_registry
+        ]
+
+    @classmethod
+    def discover_all(cls) -> dict:
+        """Discover both built-in and plugin connectors.
+
+        Returns a dict with:
+            - ``built_in``: result of ``discover_available()``
+            - ``plugins``: result of ``list_plugins()``
+            - ``total``: combined count
+        """
+        built_in = cls.discover_available()
+        plugins = cls.list_plugins()
+        return {
+            "built_in": built_in,
+            "plugins": plugins,
+            "total": len(built_in) + len(plugins),
+        }
+
+    @classmethod
+    def load_plugins_from_directory(cls, directory: str) -> int:
+        """Discover and load connector plugins from a directory.
+
+        Walks *directory* for ``*.py`` files (non-recursive), imports each as a
+        module, and counts how many ``ConnectorPlugin`` subclasses were newly
+        registered as a side effect of those imports.  Files whose names start
+        with ``_`` are skipped.  Malformed plugin files are silently ignored.
+
+        Args:
+            directory: Filesystem path to search.
+
+        Returns:
+            Number of ``ConnectorPlugin`` subclasses registered by this call.
+        """
+        from pathlib import Path as _Path
+
+        before = set(cls._plugin_registry.keys())
+        target = _Path(directory)
+        if not target.is_dir():
+            return 0
+
+        for py_file in sorted(target.glob("*.py")):
+            if py_file.name.startswith("_"):
+                continue
+            module_name = f"_harvest_plugin_{py_file.stem}"
+            spec = importlib.util.spec_from_file_location(module_name, py_file)
+            if spec is None or spec.loader is None:
+                continue
+            try:
+                mod = importlib.util.module_from_spec(spec)
+                spec.loader.exec_module(mod)  # type: ignore[union-attr]
+            except Exception:
+                pass  # malformed plugin files are non-fatal
+
+        after = set(cls._plugin_registry.keys())
+        return len(after - before)
+
+    # ---------------------------------------------------------------------------
     # Internal
     # ---------------------------------------------------------------------------
 
     @classmethod
     def _import_connector(cls, name: str) -> object:
         """Lazy-import and return a connector instance (no-arg construction)."""
-        import importlib
         module_path, class_name = cls._CONNECTOR_CLASS_MAP[name]
         module = importlib.import_module(module_path)
         connector_cls = getattr(module, class_name)
@@ -196,3 +360,23 @@ class ConnectorRegistry:
         # For the registry, we return the class itself for token-required connectors
         # so callers can instantiate with their own credentials.
         return connector_cls
+
+
+# ---------------------------------------------------------------------------
+# Convenience decorator
+# ---------------------------------------------------------------------------
+
+
+def connector_plugin(cls: type) -> type:
+    """Class decorator that auto-registers a ConnectorPlugin subclass.
+
+    Usage::
+
+        @connector_plugin
+        class MyConnector(ConnectorPlugin):
+            name = "my_connector"
+            required_env_vars = ["MY_API_KEY"]
+            ...
+    """
+    ConnectorRegistry.register_plugin(cls)
+    return cls

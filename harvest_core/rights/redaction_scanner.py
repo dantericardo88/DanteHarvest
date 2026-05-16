@@ -19,6 +19,23 @@ from harvest_core.control.exceptions import HarvestError
 
 
 # ---------------------------------------------------------------------------
+# Pattern priority levels — higher means more specific / higher confidence.
+# Used by resolve_overlaps to prefer more-specific matches.
+# ---------------------------------------------------------------------------
+
+PATTERN_PRIORITY: dict[str, int] = {
+    "credit_card": 10,
+    "us_ssn": 10,
+    "aws_access_key": 9,
+    "azure_connection_string": 9,
+    "jwt_token": 8,
+    "us_phone": 7,
+    "email_address": 6,  # lower priority due to false positives
+    "ipv4_public": 5,
+}
+
+
+# ---------------------------------------------------------------------------
 # Detection patterns
 # ---------------------------------------------------------------------------
 
@@ -53,8 +70,10 @@ _PATTERNS: dict[str, re.Pattern] = {
     "ethereum_address": re.compile(r"\b0x[a-fA-F0-9]{40}\b"),
 
     # PII
+    # RFC 5322-compliant email — negative lookbehind prevents matching
+    # version-string patterns like "1.0@2.0" where the local-part is pure digits.
     "email_address": re.compile(
-        r"\b[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}\b"
+        r"(?<!\d)(?<!\d\.)[a-zA-Z0-9._%+\-]{1,64}@[a-zA-Z0-9.\-]{1,253}\.[a-zA-Z]{2,63}(?!\d)"
     ),
     "us_phone": re.compile(
         r"\b(?:\+1[\s\-]?)?\(?\d{3}\)?[\s\-]?\d{3}[\s\-]?\d{4}\b"
@@ -139,9 +158,15 @@ class RedactionScanner:
             redacted = scanner.redact(text)
     """
 
-    def __init__(self, scan_pii: bool = True, scan_secrets: bool = True):
+    def __init__(
+        self,
+        scan_pii: bool = True,
+        scan_secrets: bool = True,
+        context_window: int = 50,
+    ):
         self.scan_pii = scan_pii
         self.scan_secrets = scan_secrets
+        self.context_window = context_window  # chars before/after match to include in report
         active_patterns: dict[str, re.Pattern] = {}
         if scan_secrets:
             active_patterns.update({k: _PATTERNS[k] for k in _SECRET_PATTERNS})
@@ -195,6 +220,73 @@ class RedactionScanner:
         for f in findings:
             chars[f.match_start:f.match_end] = list(replacement)
         return "".join(chars)
+
+    def scan_with_context(self, text: str) -> list:
+        """Return matches with surrounding context for human review.
+
+        Each entry is a dict with all Finding fields plus ``context_before``
+        and ``context_after`` — the ``context_window`` characters on either
+        side of the match.
+        """
+        scan = self.scan(text)
+        result = []
+        for f in scan.findings:
+            start = max(0, f.match_start - self.context_window)
+            end = min(len(text), f.match_end + self.context_window)
+            result.append({
+                "pattern_name": f.pattern_name,
+                "category": f.category,
+                "start": f.match_start,
+                "end": f.match_end,
+                "matched_text": f.excerpt,
+                "context_before": text[start:f.match_start],
+                "context_after": text[f.match_end:end],
+            })
+        return result
+
+    def resolve_overlaps(self, matches: list) -> list:
+        """Given overlapping matches, keep the most specific (longest span).
+
+        Accepts a list of dicts as produced by ``scan_with_context``.
+        When spans overlap, the entry with the larger span wins; ties are
+        broken by higher ``PATTERN_PRIORITY``.
+        """
+        if not matches:
+            return matches
+
+        def _priority(m: dict) -> int:
+            return PATTERN_PRIORITY.get(m.get("pattern_name", ""), 0)
+
+        # Sort by start, then by descending span length, then by descending priority
+        sorted_m = sorted(
+            matches,
+            key=lambda m: (
+                m.get("start", 0),
+                -(m.get("end", m.get("start", 0)) - m.get("start", 0)),
+                -_priority(m),
+            ),
+        )
+        resolved: list = []
+        last_end: int = -1
+        for m in sorted_m:
+            start = m.get("start", 0)
+            end = m.get("end", start + len(m.get("matched_text", "")))
+            if start >= last_end:
+                resolved.append(m)
+                last_end = end
+            elif end > last_end:
+                # Current extends further — replace last entry
+                resolved[-1] = m
+                last_end = end
+        return resolved
+
+    def get_scanner_config(self) -> dict:
+        """Return the current scanner configuration as a dict."""
+        return {
+            "pattern_count": len(self._active),
+            "context_window": self.context_window,
+            "patterns": sorted(self._active.keys()),
+        }
 
     def scan_file(self, path) -> ScanResult:
         """Read a text file and scan its contents."""

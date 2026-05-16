@@ -422,6 +422,88 @@ class SemanticChunker:
             merged.append(current)
         return merged
 
+    # ------------------------------------------------------------------
+    # Quality scoring methods
+    # ------------------------------------------------------------------
+
+    def score_chunk_coherence(self, chunk_text: str) -> float:
+        """Score chunk coherence [0.0, 1.0] based on vocabulary consistency."""
+        words = [w.lower() for w in chunk_text.split() if len(w) > 3]
+        if len(words) < 4:
+            return 1.0  # too short to be incoherent
+        # Compute type-token ratio (higher = more vocabulary diversity = potentially incoherent)
+        unique = len(set(words))
+        ttr = unique / len(words)
+        # Optimal TTR is 0.3-0.7 for coherent prose
+        if 0.3 <= ttr <= 0.7:
+            return 1.0
+        elif ttr < 0.3:
+            return ttr / 0.3  # too repetitive
+        else:
+            return (1.0 - ttr) / 0.3  # too diverse (boundary straddle)
+
+    def score_boundary_quality(self, text_before: str, text_after: str) -> float:
+        """Score boundary placement quality [0.0, 1.0]."""
+        score = 0.0
+        # Reward paragraph/sentence breaks
+        if text_before.rstrip().endswith(('.', '!', '?', '\n\n')):
+            score += 0.5
+        # Reward heading starts
+        if text_after.lstrip().startswith(('#', '##', '###')):
+            score += 0.3
+        # Penalize mid-sentence cuts (no terminal punct before break)
+        if not any(text_before.rstrip().endswith(p) for p in '.!?'):
+            score = max(0.0, score - 0.2)
+        return min(1.0, score + 0.2)  # base score 0.2
+
+    def score_overlap_quality(self, chunk_a: str, chunk_b: str, overlap: str) -> float:
+        """Score overlap quality [0.0, 1.0]. Higher = overlap carries useful bridging context."""
+        if not overlap:
+            return 0.0
+        overlap_ratio = len(overlap) / max(len(chunk_a), len(chunk_b), 1)
+        # Ideal overlap is 5-20% of chunk size
+        if 0.05 <= overlap_ratio <= 0.20:
+            return 1.0
+        elif overlap_ratio < 0.05:
+            return overlap_ratio / 0.05
+        else:
+            return max(0.0, 1.0 - (overlap_ratio - 0.20) / 0.80)
+
+    def _find_overlap(self, chunk_a: str, chunk_b: str) -> str:
+        """Find the overlapping suffix of chunk_a / prefix of chunk_b."""
+        max_overlap = min(len(chunk_a), len(chunk_b), 200)
+        for size in range(max_overlap, 0, -1):
+            if chunk_a[-size:] == chunk_b[:size]:
+                return chunk_a[-size:]
+        return ""
+
+    def chunk_with_quality(self, text: str) -> list:
+        """Chunk text and return list of dicts with quality metadata."""
+        result_obj = self.chunk(text)
+        chunks = [c.text for c in result_obj.chunks]
+        result = []
+        for i, chunk in enumerate(chunks):
+            coherence = self.score_chunk_coherence(chunk)
+            overlap_quality = 1.0
+            if i > 0:
+                # Find overlap with previous chunk
+                prev = chunks[i - 1]
+                overlap = self._find_overlap(prev, chunk)
+                overlap_quality = self.score_overlap_quality(prev, chunk, overlap)
+            result.append({
+                "text": chunk,
+                "index": i,
+                "length": len(chunk),
+                "coherence_score": round(coherence, 3),
+                "overlap_quality": round(overlap_quality, 3),
+                "quality_score": round((coherence + overlap_quality) / 2, 3),
+            })
+        return result
+
+    # ------------------------------------------------------------------
+    # Helpers
+    # ------------------------------------------------------------------
+
     def _segments_to_chunks(
         self,
         segments: List[str],

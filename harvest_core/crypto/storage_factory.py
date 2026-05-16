@@ -30,6 +30,8 @@ from __future__ import annotations
 
 import logging
 import os
+import secrets
+import warnings
 from pathlib import Path
 from typing import List, Optional, Union
 
@@ -39,6 +41,38 @@ _log = logging.getLogger(__name__)
 # This provides authenticated encryption even without explicit key management;
 # callers should override via env var or KeyManager for production deployments.
 _DEFAULT_PASSPHRASE = "harvest-default-encrypt-key-change-me"
+
+
+class HarvestKeyError(Exception):
+    """Raised when encryption key configuration is invalid or missing."""
+
+
+def _get_encryption_key() -> str:
+    """
+    Return the encryption key from environment variables.
+
+    Priority:
+    1. HARVEST_ENCRYPTION_KEY (new canonical name)
+    2. HARVEST_ENCRYPT_KEY (legacy fallback)
+    3. Ephemeral random 64-char hex key (with RuntimeWarning)
+    """
+    primary = os.environ.get("HARVEST_ENCRYPTION_KEY")
+    if primary:
+        return primary
+
+    legacy = os.environ.get("HARVEST_ENCRYPT_KEY")
+    if legacy:
+        return legacy
+
+    # No env var set — generate ephemeral key and warn
+    warnings.warn(
+        "HARVEST_ENCRYPTION_KEY is not set. Using an ephemeral random key — "
+        "data encrypted with this key cannot be recovered after process restart. "
+        "Set HARVEST_ENCRYPTION_KEY in your environment for persistent encryption.",
+        RuntimeWarning,
+        stacklevel=2,
+    )
+    return secrets.token_hex(32)
 
 
 # ---------------------------------------------------------------------------
@@ -168,6 +202,59 @@ class StorageFactory:
     def get_plain_store(base_path: Path) -> PlainStore:
         """Explicitly return an unencrypted PlainStore."""
         return PlainStore(Path(base_path))
+
+    @staticmethod
+    def get_store_with_key(base_path: Path, key: str) -> "EncryptedStoreAdapter":
+        """Return an EncryptedStore using an explicit key. Raises HarvestKeyError if key is empty."""
+        if not key:
+            raise HarvestKeyError("Encryption key must not be empty.")
+        base_path = Path(base_path)
+        try:
+            from harvest_core.storage.encrypted_store import EncryptedStore
+            store = EncryptedStore(passphrase=key)
+            return EncryptedStoreAdapter(store, base_path)
+        except ImportError as exc:
+            raise HarvestKeyError(
+                f"cryptography package required for EncryptedStore: {exc}"
+            ) from exc
+
+    @staticmethod
+    def validate_key_configuration() -> dict:
+        """
+        Inspect current key configuration and return a status dict.
+
+        Returns:
+            {
+                "key_configured": bool,
+                "key_source": str,   # "HARVEST_ENCRYPTION_KEY", "HARVEST_ENCRYPT_KEY", or "ephemeral"
+                "key_length_bits": int,
+                "persistent": bool,
+            }
+        """
+        primary = os.environ.get("HARVEST_ENCRYPTION_KEY")
+        if primary:
+            return {
+                "key_configured": True,
+                "key_source": "HARVEST_ENCRYPTION_KEY",
+                "key_length_bits": len(primary) * 4,
+                "persistent": True,
+            }
+
+        legacy = os.environ.get("HARVEST_ENCRYPT_KEY")
+        if legacy:
+            return {
+                "key_configured": True,
+                "key_source": "HARVEST_ENCRYPT_KEY",
+                "key_length_bits": len(legacy) * 4,
+                "persistent": True,
+            }
+
+        return {
+            "key_configured": False,
+            "key_source": "ephemeral",
+            "key_length_bits": 0,
+            "persistent": False,
+        }
 
     # ------------------------------------------------------------------
     # Internals

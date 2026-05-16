@@ -441,7 +441,7 @@ class TUIReviewer:
         return "red"
 
     @staticmethod
-    def _status_text(status: str) -> Text:
+    def _status_text(status: str) -> "Text":
         """Return color-coded Rich Text for a status string."""
         if not _HAS_RICH:
             return status  # type: ignore[return-value]
@@ -456,3 +456,123 @@ class TUIReviewer:
         }
         color = color_map.get(status.lower(), "white")
         return Text(status, style=f"bold {color}")
+
+
+# ---------------------------------------------------------------------------
+# ReviewNavigator — keyboard navigation + accept/reject/skip decisions
+# ---------------------------------------------------------------------------
+
+class ReviewNavigator:
+    """Navigate through review items with keyboard shortcuts."""
+
+    KEYBINDINGS: Dict[str, str] = {
+        "n": "next",
+        "p": "prev",
+        "a": "accept",
+        "r": "reject",
+        "s": "skip",
+        "e": "edit",
+        "q": "quit",
+        "?": "help",
+    }
+
+    def __init__(self, items: List[Dict[str, Any]]) -> None:
+        self.items = list(items)
+        self.index: int = 0
+        self._decisions: Dict[int, str] = {}
+
+    def current(self) -> Optional[Dict[str, Any]]:
+        return self.items[self.index] if self.items else None
+
+    def next(self) -> bool:
+        if self.index < len(self.items) - 1:
+            self.index += 1
+            return True
+        return False
+
+    def prev(self) -> bool:
+        if self.index > 0:
+            self.index -= 1
+            return True
+        return False
+
+    def decide(self, decision: str) -> None:
+        """Record a decision for the current item. Must be 'accept', 'reject', or 'skip'."""
+        if decision not in ("accept", "reject", "skip"):
+            raise ValueError(f"Invalid decision: {decision}. Must be accept/reject/skip")
+        self._decisions[self.index] = decision
+
+    def get_decisions(self) -> Dict[int, str]:
+        return dict(self._decisions)
+
+    def get_summary(self) -> Dict[str, int]:
+        total = len(self.items)
+        decided = len(self._decisions)
+        accepted = sum(1 for d in self._decisions.values() if d == "accept")
+        rejected = sum(1 for d in self._decisions.values() if d == "reject")
+        return {
+            "total": total,
+            "decided": decided,
+            "pending": total - decided,
+            "accepted": accepted,
+            "rejected": rejected,
+            "skipped": decided - accepted - rejected,
+        }
+
+    def export_decisions(self, format: str = "json") -> str:  # noqa: A002
+        """Export review decisions as JSON or CSV."""
+        decisions = []
+        for i, item in enumerate(self.items):
+            decisions.append({
+                "index": i,
+                "item": item,
+                "decision": self._decisions.get(i, "pending"),
+            })
+        if format == "json":
+            return json.dumps(decisions, indent=2)
+        # CSV
+        lines = ["index,decision,item_id"]
+        for d in decisions:
+            it: Dict[str, Any] = d["item"]  # type: ignore[assignment]
+            item_id = it.get("id", it.get("url", str(d["index"])))
+            lines.append(f"{d['index']},{d['decision']},{item_id}")
+        return "\n".join(lines)
+
+    def get_help_text(self) -> str:
+        lines = ["Keyboard Shortcuts:"]
+        for key, action in self.KEYBINDINGS.items():
+            lines.append(f"  [{key}] {action}")
+        return "\n".join(lines)
+
+
+# ---------------------------------------------------------------------------
+# ReviewDiffDisplay — before/after diff rendering
+# ---------------------------------------------------------------------------
+
+class ReviewDiffDisplay:
+    """Renders before/after diffs for human review."""
+
+    def format_diff(self, before: str, after: str) -> str:
+        """Simple line-based diff showing removed (-), added (+), and common lines."""
+        before_lines = before.splitlines()
+        after_lines = after.splitlines()
+        result: List[str] = []
+        for line in before_lines:
+            if line not in after_lines:
+                result.append(f"- {line}")
+        for line in after_lines:
+            if line not in before_lines:
+                result.append(f"+ {line}")
+        for line in before_lines:
+            if line in after_lines:
+                result.append(f"  {line}")
+        return "\n".join(result)
+
+    def format_item_for_review(self, item: Dict[str, Any]) -> str:
+        """Format a single item for human review display, truncating long values."""
+        lines: List[str] = []
+        for k, v in item.items():
+            if isinstance(v, str) and len(v) > 200:
+                v = v[:200] + "..."
+            lines.append(f"  {k}: {v}")
+        return "\n".join(lines)

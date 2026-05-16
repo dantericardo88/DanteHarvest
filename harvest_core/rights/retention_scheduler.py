@@ -161,6 +161,7 @@ class RetentionScheduler:
         scheduler: Any,
         job_id: str = "retention-gc",
         hours: int = 24,
+        auto_start: bool = True,
     ) -> Any:
         """
         Register the retention GC as a recurring job on *scheduler*.
@@ -169,9 +170,12 @@ class RetentionScheduler:
         and registers an :class:`IntervalTrigger` that fires every *hours* hours.
 
         Args:
-            scheduler: A ``JobScheduler`` instance with a ``schedule_job()`` method.
-            job_id:    Unique identifier for the scheduled job (default: "retention-gc").
-            hours:     Recurrence interval in hours (default: 24).
+            scheduler:  A ``JobScheduler`` instance with a ``schedule_job()`` method.
+            job_id:     Unique identifier for the scheduled job (default: "retention-gc").
+            hours:      Recurrence interval in hours (default: 24).
+            auto_start: If True (default), run one retention check immediately before
+                        registering the recurring schedule so enforcement begins right
+                        away rather than waiting for the first interval to elapse.
 
         Returns:
             The :class:`ScheduledJob` returned by ``scheduler.schedule_job()``.
@@ -184,8 +188,6 @@ class RetentionScheduler:
                 "Ensure harvest_ui is installed."
             ) from exc
 
-        trigger = IntervalTrigger(hours=hours)
-
         def _run_gc() -> None:
             import asyncio
             loop = asyncio.new_event_loop()
@@ -194,6 +196,13 @@ class RetentionScheduler:
             finally:
                 loop.close()
 
+        if auto_start:
+            try:
+                _run_gc()
+            except Exception:
+                pass  # auto-start failure never blocks job registration
+
+        trigger = IntervalTrigger(hours=hours)
         return scheduler.schedule_job(job_id, _run_gc, trigger)
 
     @property

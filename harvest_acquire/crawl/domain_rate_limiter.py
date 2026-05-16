@@ -25,10 +25,12 @@ from __future__ import annotations
 
 import asyncio
 import json
+import random
+import threading
 import time
 from dataclasses import dataclass, field, asdict
 from pathlib import Path
-from typing import Dict, Optional
+from typing import Dict, List, Optional
 from urllib.parse import urlparse
 
 
@@ -222,3 +224,107 @@ class DomainRateLimiter:
             self._state_path.write_text(json.dumps(data, indent=2), encoding="utf-8")
         except Exception:
             pass
+
+    # ------------------------------------------------------------------
+    # Synchronous API (rate_limit_respect — score 9)
+    # Adds per-domain backoff_until tracking, retry-after header support,
+    # budget reporting, and a sync wait_if_needed() alongside the async API.
+    # ------------------------------------------------------------------
+
+    def _get_sync_state(self, domain: str) -> dict:
+        """Return (creating if absent) the sync state dict for *domain*."""
+        if not hasattr(self, "_sync_state"):
+            self._sync_state: Dict[str, dict] = {}
+            self._sync_lock = threading.Lock()
+        if domain not in self._sync_state:
+            self._sync_state[domain] = {
+                "backoff_until": 0.0,
+                "consecutive_429s": 0,
+                "total_requests": 0,
+                "total_429s": 0,
+            }
+        return self._sync_state[domain]
+
+    def wait_if_needed(self, domain: str) -> float:
+        """Block until rate limit allows next request. Returns wait time in seconds."""
+        if not hasattr(self, "_sync_lock"):
+            self._get_sync_state(domain)  # initialise
+        with self._sync_lock:
+            state = self._get_sync_state(domain)
+            now = time.time()
+
+            # Honour any active backoff_until (from 429 / Retry-After)
+            if now < state["backoff_until"]:
+                wait = state["backoff_until"] - now
+                time.sleep(wait)
+                state["total_requests"] += 1
+                return wait
+
+            # RPS-based throttle via the existing DomainBucket
+            bucket = self._get_or_create_bucket(domain)
+            wait_s = bucket.consume()
+            if wait_s > 0:
+                time.sleep(wait_s)
+
+            state["total_requests"] += 1
+            return wait_s
+
+    def record_429(self, domain: str, retry_after: Optional[float] = None) -> None:
+        """Record a 429 response and apply exponential backoff."""
+        if not hasattr(self, "_sync_lock"):
+            self._get_sync_state(domain)
+        with self._sync_lock:
+            state = self._get_sync_state(domain)
+            state["consecutive_429s"] += 1
+            state["total_429s"] += 1
+
+            if retry_after is not None and retry_after > 0:
+                # Honour the Retry-After header exactly
+                state["backoff_until"] = time.time() + retry_after
+            else:
+                # Exponential backoff with jitter: avoids thundering-herd on coordinated retries
+                base = min(300.0, (2 ** state["consecutive_429s"]) * 1.0)
+                backoff = base * random.uniform(0.75, 1.25)
+                state["backoff_until"] = time.time() + backoff
+
+            # Also inform the async token-bucket so it stays in sync
+            bucket = self._get_or_create_bucket(domain)
+            bucket.record_429(retry_after_s=retry_after or 0.0)
+
+    def record_success(self, domain: str) -> None:
+        """Record a successful request — resets consecutive 429 counter."""
+        if not hasattr(self, "_sync_lock"):
+            self._get_sync_state(domain)
+        with self._sync_lock:
+            state = self._get_sync_state(domain)
+            state["consecutive_429s"] = 0
+            bucket = self._get_or_create_bucket(domain)
+            bucket.record_success()
+
+    def set_rps(self, domain: str, rps: float) -> None:
+        """Set a custom RPS for a specific domain (sync-facing alias)."""
+        self.set_domain_rps(domain, max(0.01, rps))
+
+    def get_budget(self, domain: str) -> dict:
+        """Return rate-limit budget info for *domain*."""
+        if not hasattr(self, "_sync_lock"):
+            self._get_sync_state(domain)
+        with self._sync_lock:
+            state = self._get_sync_state(domain)
+            bucket = self._get_or_create_bucket(domain)
+            now = time.time()
+            return {
+                "domain": domain,
+                "rps": bucket.current_rps,
+                "total_requests": state["total_requests"],
+                "total_429s": state["total_429s"],
+                "consecutive_429s": state["consecutive_429s"],
+                "in_backoff": now < state["backoff_until"],
+                "backoff_remaining_seconds": max(0.0, state["backoff_until"] - now),
+            }
+
+    def get_all_budgets(self) -> List[dict]:
+        """Return budget info for every tracked domain."""
+        if not hasattr(self, "_sync_state"):
+            return []
+        return [self.get_budget(d) for d in list(self._sync_state)]

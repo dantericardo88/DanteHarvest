@@ -21,6 +21,7 @@ Constitutional guarantees:
 
 from __future__ import annotations
 
+import hashlib
 import json
 import socket
 import time
@@ -28,6 +29,19 @@ from dataclasses import dataclass, field, asdict
 from pathlib import Path
 from typing import Any, Dict, Iterator, List, Optional
 from uuid import uuid4
+
+
+# ---------------------------------------------------------------------------
+# Tamper-evident hash helper
+# ---------------------------------------------------------------------------
+
+_GENESIS_HASH = "genesis"
+
+
+def _compute_entry_hash(prev_hash: str, entry: dict) -> str:
+    """SHA-256 hash of prev_hash + canonical JSON of entry (excluding entry_hash itself)."""
+    payload = prev_hash + json.dumps(entry, sort_keys=True, ensure_ascii=True)
+    return hashlib.sha256(payload.encode()).hexdigest()
 
 
 # ---------------------------------------------------------------------------
@@ -75,13 +89,17 @@ class AuditEvent:
     details: Dict[str, Any]
     timestamp: float = field(default_factory=time.time)
     machine: str = field(default_factory=socket.gethostname)
+    # Tamper-evident chaining fields (optional for backwards compat)
+    entry_hash: Optional[str] = field(default=None)
+    prev_hash: Optional[str] = field(default=None)
 
     def to_dict(self) -> dict:
         return asdict(self)
 
     @classmethod
     def from_dict(cls, d: dict) -> "AuditEvent":
-        return cls(**{k: d[k] for k in cls.__dataclass_fields__ if k in d})
+        known = {k for k in cls.__dataclass_fields__}
+        return cls(**{k: d[k] for k in known if k in d})
 
     @property
     def iso_timestamp(self) -> str:
@@ -123,6 +141,8 @@ class AuditLogger:
         self._log_path = self._log_dir / self.LOG_FILE
         self._chain_writer = chain_writer
         self._default_operator = default_operator
+        # In-memory tracking of the last hash for chaining
+        self._last_hash: Optional[str] = None
 
     def log(
         self,
@@ -148,9 +168,38 @@ class AuditLogger:
             outcome=outcome,
             details=details or {},
         )
+        # Compute tamper-evident hash chain
+        prev_hash = self._get_prev_hash()
+        event.prev_hash = prev_hash
+        entry_body = {k: v for k, v in event.to_dict().items() if k != "entry_hash"}
+        event.entry_hash = _compute_entry_hash(prev_hash, entry_body)
+        self._last_hash = event.entry_hash
+
         self._append_log(event)
         self._append_chain(event)
         return event
+
+    def _get_prev_hash(self) -> str:
+        """Return the hash of the last written entry, loading from disk if needed."""
+        if self._last_hash is not None:
+            return self._last_hash
+        # Load from disk (in case logger was reconstructed)
+        if self._log_path.exists():
+            last_line = None
+            for line in self._log_path.read_text(encoding="utf-8").splitlines():
+                line = line.strip()
+                if line:
+                    last_line = line
+            if last_line:
+                try:
+                    d = json.loads(last_line)
+                    h = d.get("entry_hash")
+                    if h:
+                        self._last_hash = h
+                        return h
+                except Exception:
+                    pass
+        return _GENESIS_HASH
 
     def query(
         self,
@@ -198,6 +247,62 @@ class AuditLogger:
             total += 1
         return {"total": total, "by_type": counts}
 
+    def verify_chain_integrity(self) -> dict:
+        """
+        Verify the tamper-evident hash chain across all log entries.
+
+        Returns a dict: {"valid": bool, "entries_checked": int, "errors": list}
+        Only entries that have entry_hash/prev_hash are checked; legacy entries
+        without these fields are skipped (counted but not validated).
+        """
+        entries_raw = self._load_entries()
+        errors = []
+        prev_hash = _GENESIS_HASH
+        chain_entries = 0
+
+        for i, raw in enumerate(entries_raw):
+            entry_hash = raw.get("entry_hash")
+
+            # Skip legacy entries that pre-date chaining
+            if entry_hash is None:
+                continue
+
+            chain_entries += 1
+            # Recompute: body is everything except entry_hash itself
+            body = {k: v for k, v in raw.items() if k != "entry_hash"}
+            expected = _compute_entry_hash(prev_hash, body)
+
+            if entry_hash != expected:
+                errors.append(
+                    {
+                        "index": i,
+                        "event_type": raw.get("event_type"),
+                        "hash_mismatch": True,
+                    }
+                )
+            prev_hash = entry_hash
+
+        return {
+            "valid": len(errors) == 0,
+            "entries_checked": chain_entries,
+            "errors": errors,
+        }
+
+    def _load_entries(self) -> List[dict]:
+        """Return all raw log entries as dicts (for chain verification)."""
+        if not self._log_path.exists():
+            return []
+        result = []
+        for line in self._log_path.read_text(encoding="utf-8").splitlines():
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                result.append(json.loads(line))
+            except Exception:
+                pass
+        return result
+
     # ------------------------------------------------------------------
     # Internals
     # ------------------------------------------------------------------
@@ -206,8 +311,13 @@ class AuditLogger:
         try:
             with self._log_path.open("a", encoding="utf-8") as f:
                 f.write(json.dumps(event.to_dict()) + "\n")
-        except Exception:
-            pass
+                f.flush()
+        except Exception as exc:
+            import logging as _logging
+            _logging.getLogger(__name__).error(
+                "AUDIT LOG WRITE FAILED — event %s will not be persisted: %s",
+                event.event_id, exc,
+            )
 
     def _append_chain(self, event: AuditEvent) -> None:
         if not self._chain_writer:

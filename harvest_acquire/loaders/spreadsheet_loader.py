@@ -27,6 +27,12 @@ from typing import List, Optional
 
 from harvest_core.control.exceptions import NormalizationError
 
+try:
+    import openpyxl as _openpyxl  # noqa: F401
+    _OPENPYXL_AVAILABLE = True
+except (ImportError, TypeError):
+    _OPENPYXL_AVAILABLE = False
+
 
 @dataclass
 class SheetDocument:
@@ -80,6 +86,18 @@ class SpreadsheetLoader:
 
     SUPPORTED_SUFFIXES = {".xlsx", ".xls", ".xlsm", ".csv", ".ods"}
 
+    def get_supported_formats(self) -> List[str]:
+        """Return list of supported format strings. CSV is always present."""
+        formats = ["csv"]
+        try:
+            import openpyxl  # noqa: F401
+            for fmt in ("xlsx", "xls", "xlsm", "ods"):
+                if fmt not in formats:
+                    formats.append(fmt)
+        except (ImportError, TypeError):
+            pass
+        return formats
+
     def load(self, path: Path) -> List[SpreadsheetDocument]:
         """
         Load a spreadsheet file. Returns a list with one SpreadsheetDocument.
@@ -108,8 +126,16 @@ class SpreadsheetLoader:
         try:
             import openpyxl
         except ImportError:
-            # Graceful fallback: try treating as CSV (works for simple cases)
-            # For XLSX we cannot parse without openpyxl — re-raise as NormalizationError
+            csv_path = path.with_suffix(".csv")
+            if csv_path.exists():
+                import warnings
+                warnings.warn(
+                    f"openpyxl not installed; falling back to CSV for {path.name}. "
+                    "Install openpyxl: pip install openpyxl",
+                    ImportWarning,
+                    stacklevel=2,
+                )
+                return self._load_csv(csv_path)
             raise NormalizationError(
                 "openpyxl is required to read XLSX/XLS/ODS files. "
                 "Install it with: pip install openpyxl"
@@ -174,3 +200,41 @@ class SpreadsheetLoader:
             markdown=full_md,
         )
         return [SpreadsheetDocument(file_path=str(path), format="csv", sheets=[sheet])]
+
+
+class IngestCapabilities:
+    """Reports which ingest formats are available without importing optional deps."""
+
+    @staticmethod
+    def get_available() -> dict:
+        caps: dict = {"csv": True, "json": True, "txt": True, "html": True}
+        try:
+            import openpyxl  # noqa: F401
+            caps["xlsx"] = True
+            caps["xls"] = True
+        except ImportError:
+            caps["xlsx"] = False
+            caps["xls"] = False
+        try:
+            import pdfminer  # noqa: F401
+            caps["pdf"] = True
+        except ImportError:
+            try:
+                import pypdf  # noqa: F401
+                caps["pdf"] = True
+            except ImportError:
+                caps["pdf"] = False
+        return caps
+
+    @staticmethod
+    def get_missing_deps() -> list:
+        missing = []
+        try:
+            import openpyxl  # noqa: F401
+        except ImportError:
+            missing.append({
+                "package": "openpyxl",
+                "formats": ["xlsx", "xls"],
+                "install": "pip install openpyxl",
+            })
+        return missing

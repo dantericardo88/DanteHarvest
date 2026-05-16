@@ -207,18 +207,18 @@ class TestDetectCsrOnly:
     def test_detect_csr_only_skeleton(self):
         html = self._make_csr_skeleton()
         text = _extract_text_content(html)
-        assert _detect_csr_only(html, text) is True
+        assert _detect_csr_only(html, text)["is_csr"] is True
 
     def test_detect_ssr_has_content(self):
         html = self._make_ssr_page()
         text = _extract_text_content(html)
-        assert _detect_csr_only(html, text) is False
+        assert _detect_csr_only(html, text)["is_csr"] is False
 
     def test_short_text_but_low_script_ratio_is_not_csr(self):
         # Very small page with no scripts — a simple static page, not CSR
         html = "<html><body><p>Hello world</p></body></html>"
         text = _extract_text_content(html)
-        assert _detect_csr_only(html, text) is False
+        assert _detect_csr_only(html, text)["is_csr"] is False
 
 
 # ---------------------------------------------------------------------------
